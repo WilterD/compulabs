@@ -1,7 +1,7 @@
 // React import is handled by JSX transform
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext';
+import { AuthProvider } from './AuthContext';
+import { SocketProvider } from './SocketContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';

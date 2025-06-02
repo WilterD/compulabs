@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
-import { useSocket } from '../contexts/SocketContext';
+import { useSocket } from '../SocketContext';
 
 interface Reservation {
   id: number;
@@ -24,7 +23,6 @@ interface Reservation {
 }
 
 const ReservationList: React.FC = () => {
-  const { user } = useAuth();
   const { socket } = useSocket();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);

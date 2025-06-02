@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../SocketContext';
+import { useAuth } from '../AuthContext';
 
 interface Computer {
   id: number;

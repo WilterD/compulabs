@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../SocketContext';
+import { useAuth } from '../AuthContext';
 import axios from 'axios';
 
 const Dashboard: React.FC = () => {

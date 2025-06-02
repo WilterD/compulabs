@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
-import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../AuthContext';
+import { useSocket } from '../SocketContext';
 
 interface Lab {
   id: number;
