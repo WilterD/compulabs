@@ -1,24 +1,34 @@
-# Dockerfile.backend                               
+#################################
+# Etapa única – backend Flask
+#################################
 FROM python:3.11-slim
 
+# 1. Ajustes básicos
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# 1. Dependencias
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir flask-socketio eventlet
+# 2. Dependencias de sistema mínimas (para compilar paquetes C, si los hay)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential gcc \
+ && rm -rf /var/lib/apt/lists/*
 
-# 2. Código fuente completo (todo el proyecto)
+# 3. Instala requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir flask-socketio eventlet   # por si no están en el requirements
+
+# 4. Copia TODO el código backend
 COPY . .
 
-# Variables de entorno para la base de datos
+# 5. Variables de entorno por defecto (se pueden sobre­escribir en compose)
 ENV DB_USERNAME=root \
     DB_PASSWORD=password \
     DB_HOST=db \
     DB_PORT=3306 \
-    DB_NAME=reservas_db
+    DB_NAME=reservas_db \
+    FLASK_ENV=production
 
 EXPOSE 5000
 
-# 3. Arranque — main.py está en la raíz
+# 6. Arranque
 CMD ["python", "main.py"]

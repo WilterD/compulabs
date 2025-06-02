@@ -1,32 +1,33 @@
 #################################
-# Etapa de build
+# ► Stage 1 : build (Node)
 #################################
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# 1. Copia los manifiestos de dependencias
+# 1. Manifiestos de dependencias
 COPY frontend/package.json frontend/package-lock.json ./
 
-# 2. Instala dependencias (más rápido y reproducible que npm install)
+# 2. Instalación reproducible
 RUN npm ci                # usa el package‑lock.json
 
-# 3. Copia el resto del código fuente
+# 3. Código fuente completo del frontend
 COPY frontend/ .
 
-# 4. Compila la app para producción
-RUN npm run build         # deja los archivos en /app/dist
+# 4. Compilación para producción
+RUN npm run build         # Vite/CRA generará /app/dist  (o /app/build)
 
 #################################
-# Etapa de runtime
+# ► Stage 2 : runtime (Nginx)
 #################################
 FROM nginx:alpine
 
-# Copia tu configuración de Nginx (ajusta la ruta si la moviste)
+# Configuración personalizada de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia el resultado del build al directorio que Nginx sirve
+# Archivos estáticos resultantes del build
 COPY --from=build /app/dist /usr/share/nginx/html
+#        ↑ si usas CRA cambia a /app/build
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

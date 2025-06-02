@@ -1,12 +1,24 @@
-# .dockerignore
-# ignora todo...
-**
+###########################################################
+# 1. Carpetas y archivos que NO deben ir al contexto
+###########################################################
 
-# …y vuelve a incluir solo lo que interesa
-!package.json
-!pnpm-lock.yaml
-!src
-!public
-!vite.config.*
-!tsconfig.*
-!nginx.conf
+# ── control de versiones ────────────────────────────────
+.git
+.gitignore
+
+# ── artefactos y dependencias grandes ───────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+__pycache__/
+*.py[cod]
+
+# ── ficheros de sistema / editor ────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+
+###########################################################
+# 2. Todo lo que NO esté arriba se enviará a Docker
+#    (NO añadimos ningún “**” que vuelva a ignorarlo todo)
+###########################################################

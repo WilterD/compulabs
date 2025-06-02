@@ -16,7 +16,7 @@ services:
     networks:
       - reservas_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: reservas_backend
+    container_name: reservas_backend      # ← aquí adentro, no fuera
     restart: always
     depends_on:
       db:
@@ -37,12 +37,11 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: reservas_db
-      FLASK_ENV: production
-      FLASK_APP: src/main.py
     ports:
       - "5000:5000"
     networks:
       - reservas_network
+
 
   # Servicio de frontend React
   frontend:
