@@ -1,15 +1,15 @@
 import os
 import sys
-# DON'T CHANGE THIS !!!
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
-from src.models.db import db
-from src.routes.auth import auth_bp
-from src.routes.lab import lab_bp
-from src.routes.computer import computer_bp
-from src.routes.reservation import reservation_bp
+from db import db
+from auth import auth_bp
+from lab import lab_bp
+from computer import computer_bp
+from reservation import reservation_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 CORS(app)  # Habilitar CORS para permitir solicitudes desde el frontend
@@ -22,7 +22,11 @@ app.register_blueprint(computer_bp, url_prefix='/api/computers')
 app.register_blueprint(reservation_bp, url_prefix='/api/reservations')
 
 # Configuración de la base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'mydb')}"
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:"
+    f"{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:"
+    f"{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'mydb')}"
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -35,7 +39,7 @@ def health_check():
 def serve(path):
     static_folder_path = app.static_folder
     if static_folder_path is None:
-            return "Static folder not configured", 404
+        return "Static folder not configured", 404
 
     if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
         return send_from_directory(static_folder_path, path)
@@ -45,11 +49,6 @@ def serve(path):
             return send_from_directory(static_folder_path, 'index.html')
         else:
             return "index.html not found", 404
-
-# Inicializar la base de datos
-@app.before_first_request
-def initialize_database():
-    db.create_all()
 
 if __name__ == '__main__':
     with app.app_context():

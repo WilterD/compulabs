@@ -29,11 +29,11 @@ from datetime import datetime, timedelta
 # Agregar el directorio src al path para importar los módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.models.db import db
-from src.models.user import User
-from src.models.laboratory import Laboratory
-from src.models.computer import Computer
-from src.models.reservation import Reservation
+from db import db
+from user import User
+from laboratory import Laboratory
+from computer import Computer
+from reservation import Reservation
 from src.main import app
 
 class TestModels(unittest.TestCase):
@@ -182,10 +182,10 @@ from datetime import datetime, timedelta
 # Agregar el directorio src al path para importar los módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.models.db import db
-from src.models.user import User
-from src.models.laboratory import Laboratory
-from src.models.computer import Computer
+from db import db
+from user import User
+from laboratory import Laboratory
+from computer import Computer
 from src.main import app
 
 class TestRoutes(unittest.TestCase):

@@ -1,24 +1,17 @@
-###########################################################
-# 1. Carpetas y archivos que NO deben ir al contexto
-###########################################################
+# Ignora dependencias node del host
+node_modules/
+dist/
+build/
 
-# ── control de versiones ────────────────────────────────
-.git
-.gitignore
+# Ignora virtualenvs Python y archivos temporales
+env/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
 
-# ── artefactos y dependencias grandes ───────────────────
+# Si quieres ignorar resultados locales de build
 frontend/node_modules/
 frontend/dist/
 frontend/build/
-__pycache__/
-*.py[cod]
-
-# ── ficheros de sistema / editor ────────────────────────
-.DS_Store
-Thumbs.db
-*.log
-
-###########################################################
-# 2. Todo lo que NO esté arriba se enviará a Docker
-#    (NO añadimos ningún “**” que vuelva a ignorarlo todo)
-###########################################################

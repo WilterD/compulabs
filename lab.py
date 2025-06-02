@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-from src.models.db import db
-from src.models.laboratory import Laboratory
-from src.routes.auth import token_required
+from db import db
+from laboratory import Laboratory
+from auth import token_required
 
 lab_bp = Blueprint('lab', __name__)
 

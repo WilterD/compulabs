@@ -5,3 +5,5 @@ Flask-SocketIO
 eventlet
 PyMySQL
 python-dotenv
+PyJWT
+cryptography

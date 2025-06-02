@@ -1,5 +1,8 @@
 from datetime import datetime
-from src.models.db import db
+from db import db
+from flask import Blueprint
+reservation_bp = Blueprint('reservation', __name__)
+
 
 class Reservation(db.Model):
     __tablename__ = 'reservations'

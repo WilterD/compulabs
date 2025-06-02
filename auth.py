@@ -3,8 +3,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from functools import wraps
-from src.models.db import db
-from src.models.user import User
+from db import db
+from user import User
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -48,7 +48,8 @@ def register():
         return jsonify({'message': 'El usuario ya existe'}), 409
     
     # Crear nuevo usuario
-    hashed_password = generate_password_hash(data['password'], method='sha256')
+    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+
     
     new_user = User(
         email=data['email'],

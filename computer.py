@@ -1,5 +1,7 @@
 from datetime import datetime
-from src.models.db import db
+from db import db
+from flask import Blueprint
+computer_bp = Blueprint('computer', __name__)
 
 class Computer(db.Model):
     __tablename__ = 'computers'
