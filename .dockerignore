@@ -1,0 +1,12 @@
+# .dockerignore
+# ignora todo...
+**
+
+# …y vuelve a incluir solo lo que interesa
+!package.json
+!pnpm-lock.yaml
+!src
+!public
+!vite.config.*
+!tsconfig.*
+!nginx.conf

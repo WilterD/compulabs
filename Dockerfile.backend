@@ -1,21 +1,15 @@
-# Dockerfile para el backend Flask
+# Dockerfile.backend                               
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copiar los archivos de requisitos primero para aprovechar la caché de Docker
+# 1. Dependencias
 COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir flask-socketio eventlet
 
-# Instalar dependencias
-RUN pip install --no-cache-dir -r requirements.txt
-
+# 2. Código fuente completo (todo el proyecto)
 COPY . .
-
-# Instalar dependencias adicionales para la comunicación en tiempo real
-RUN pip install --no-cache-dir flask-socketio eventlet
-
-# Copiar el resto de la aplicación
-COPY reservas_app/ .
 
 # Variables de entorno para la base de datos
 ENV DB_USERNAME=root \
@@ -24,8 +18,7 @@ ENV DB_USERNAME=root \
     DB_PORT=3306 \
     DB_NAME=reservas_db
 
-# Exponer el puerto para la aplicación Flask
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
-CMD ["python", "src/main.py"]
+# 3. Arranque — main.py está en la raíz
+CMD ["python", "main.py"]
