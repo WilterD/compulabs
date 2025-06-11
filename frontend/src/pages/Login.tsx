@@ -29,7 +29,6 @@ const Login: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
         <h3 className="text-2xl font-bold text-center text-gray-800">Sistema de Reserva de Computadoras</h3>
-        <p className="text-center text-gray-600 mt-2">Inicia sesión en tu cuenta</p>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4" role="alert">
