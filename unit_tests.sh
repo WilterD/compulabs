@@ -54,8 +54,7 @@ class TestModels(unittest.TestCase):
             user = User(
                 email='test@example.com',
                 password='password',
-                first_name='Test',
-                last_name='User',
+                name='Test',
                 role='student'
             )
             db.session.add(user)
@@ -63,8 +62,7 @@ class TestModels(unittest.TestCase):
             
             saved_user = User.query.filter_by(email='test@example.com').first()
             self.assertIsNotNone(saved_user)
-            self.assertEqual(saved_user.first_name, 'Test')
-            self.assertEqual(saved_user.last_name, 'User')
+            self.assertEqual(saved_user.name, 'Test')
             self.assertEqual(saved_user.role, 'student')
     
     def test_laboratory_model(self):
@@ -121,8 +119,7 @@ class TestModels(unittest.TestCase):
             user = User(
                 email='test@example.com',
                 password='password',
-                first_name='Test',
-                last_name='User',
+                name='Test',
                 role='student'
             )
             db.session.add(user)
@@ -201,8 +198,7 @@ class TestRoutes(unittest.TestCase):
             admin = User(
                 email='admin@example.com',
                 password='$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi',  # 'admin123' hasheado
-                first_name='Admin',
-                last_name='User',
+                name='Admin',
                 role='admin'
             )
             db.session.add(admin)
@@ -211,8 +207,7 @@ class TestRoutes(unittest.TestCase):
             student = User(
                 email='student@example.com',
                 password='$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi',  # 'admin123' hasheado
-                first_name='Student',
-                last_name='User',
+                name='Student',
                 role='student'
             )
             db.session.add(student)

@@ -16,8 +16,7 @@ CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     role ENUM('admin', 'student', 'staff') NOT NULL DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -67,7 +66,7 @@ CREATE TABLE reservations (
 
 -- Insertar usuarios de prueba
 -- Contraseñas: admin123 y student123 (hasheadas con bcrypt)
-INSERT INTO users (email, password, first_name, last_name, role) VALUES
+INSERT INTO users (email, password, name, role) VALUES
 ('admin@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Admin', 'User', 'admin'),
 ('student@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Student', 'User', 'student'),
 ('staff@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Staff', 'User', 'staff');
@@ -125,7 +124,7 @@ JOIN laboratories l ON c.laboratory_id = l.id
 WHERE c.status = 'available';
 
 CREATE VIEW upcoming_reservations AS
-SELECT r.*, u.email as user_email, u.first_name, u.last_name, 
+SELECT r.*, u.email as user_email, u.name, 
        c.name as computer_name, l.name as laboratory_name
 FROM reservations r
 JOIN users u ON r.user_id = u.id

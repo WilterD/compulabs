@@ -7,8 +7,7 @@ const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    first_name: '',
-    last_name: ''
+    name: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,8 +37,7 @@ const Register: React.FC = () => {
       await register({
         email: formData.email,
         password: formData.password,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        name: formData.name,
         role: 'student' // Por defecto, todos los usuarios nuevos son estudiantes
       });
       navigate('/dashboard');
@@ -54,7 +52,6 @@ const Register: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg w-full max-w-md">
         <h3 className="text-2xl font-bold text-center text-gray-800">Crear una cuenta</h3>
-        <p className="text-center text-gray-600 mt-2">Regístrate para reservar computadoras</p>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4" role="alert">
@@ -67,22 +64,10 @@ const Register: React.FC = () => {
             <label className="block text-gray-700">Nombre</label>
             <input
               type="text"
-              name="first_name"
+              name="name"
               placeholder="Ingresa tu nombre"
               className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-              value={formData.first_name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="mt-4">
-            <label className="block text-gray-700">Apellido</label>
-            <input
-              type="text"
-              name="last_name"
-              placeholder="Ingresa tu apellido"
-              className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-              value={formData.last_name}
+              value={formData.name}
               onChange={handleChange}
               required
             />
@@ -126,7 +111,7 @@ const Register: React.FC = () => {
           <div className="flex items-baseline justify-between mt-6">
             <button
               type="submit"
-              className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 w-full"
+              className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 w-full hover:cursor-pointer"
               disabled={loading}
             >
               {loading ? 'Registrando...' : 'Registrarse'}

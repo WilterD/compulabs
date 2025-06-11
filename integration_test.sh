@@ -64,7 +64,7 @@ echo -e "${YELLOW}Realizando pruebas de integración...${NC}"
 
 # Prueba de registro de usuario
 echo -e "${YELLOW}Prueba: Registro de usuario...${NC}"
-REGISTER_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"password123","first_name":"Test","last_name":"User"}' http://localhost:5000/api/auth/register)
+REGISTER_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"password123","name":"Test"}' http://localhost:5000/api/auth/register)
 if [[ $REGISTER_RESPONSE == *"exitosamente"* ]]; then
   echo -e "${GREEN}✓ Registro de usuario exitoso${NC}"
 else

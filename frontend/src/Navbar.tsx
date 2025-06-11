@@ -30,12 +30,12 @@ const Navbar: React.FC = () => {
               >
                 <span className="sr-only">Abrir menú de usuario</span>
                 <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-600 text-white">
-                  {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                  {user?.name?.charAt(0)}
                 </div>
               </button>
             </div>
             <div className="ml-3">
-              <div className="text-base font-medium text-gray-800">{user?.first_name} {user?.last_name}</div>
+              <div className="text-base font-medium text-gray-800">{user?.name} </div>
               <div className="text-sm text-gray-500">{user?.email}</div>
             </div>
             <button

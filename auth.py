@@ -40,7 +40,7 @@ def register():
     data = request.get_json()
     
     # Validar datos requeridos
-    if not data or not data.get('email') or not data.get('password') or not data.get('first_name') or not data.get('last_name'):
+    if not data or not data.get('email') or not data.get('password') or not data.get('name'):
         return jsonify({'message': 'Datos incompletos'}), 400
     
     # Verificar si el usuario ya existe
@@ -54,8 +54,7 @@ def register():
     new_user = User(
         email=data['email'],
         password=hashed_password,
-        first_name=data['first_name'],
-        last_name=data['last_name'],
+        name=data['name'],
         role=data.get('role', 'student')
     )
     
@@ -103,11 +102,8 @@ def get_profile(current_user):
 def update_profile(current_user):
     data = request.get_json()
     
-    if data.get('first_name'):
-        current_user.first_name = data['first_name']
-    
-    if data.get('last_name'):
-        current_user.last_name = data['last_name']
+    if data.get('name'):
+        current_user.name = data['name']
     
     # Actualizar contraseña si se proporciona
     if data.get('password'):

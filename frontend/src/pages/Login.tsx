@@ -62,7 +62,7 @@ const Login: React.FC = () => {
           <div className="flex items-baseline justify-between mt-6">
             <button
               type="submit"
-              className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 w-full"
+              className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 w-full hover:cursor-pointer"
               disabled={loading}
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
@@ -73,7 +73,7 @@ const Login: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/register')}
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline hover:cursor-pointer"
             >
               Regístrate
             </button>
