@@ -14,7 +14,7 @@ RUN npm ci
 # Copia el resto del código fuente
 COPY frontend/ .
 
-# Compila la app para producción
+# Compila la app para producción (React usa 'build' por defecto, no 'dist')
 RUN npm run build
 
 #################################
@@ -25,7 +25,7 @@ FROM nginx:alpine
 # Copia la configuración de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia el resultado del build
+# Copia el resultado del build de React (la carpeta es 'build', no 'dist')
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80

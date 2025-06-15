@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from functools import wraps
@@ -8,10 +7,8 @@ from user import User
 
 auth_bp = Blueprint('auth', __name__)
 
-# Clave secreta para JWT
-SECRET_KEY = 'your_secret_key'  # En producción, usar variable de entorno
+SECRET_KEY = 'your_secret_key'  # En producción, usa variable de entorno
 
-# Decorador para rutas protegidas
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -39,21 +36,16 @@ def token_required(f):
 def register():
     data = request.get_json()
     
-    # Validar datos requeridos
     if not data or not data.get('email') or not data.get('password') or not data.get('name'):
         return jsonify({'message': 'Datos incompletos'}), 400
     
-    # Verificar si el usuario ya existe
     if User.query.filter_by(email=data['email']).first():
         return jsonify({'message': 'El usuario ya existe'}), 409
     
-    # Crear nuevo usuario
-    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
-
-    
+    # Guardamos la contraseña en texto plano
     new_user = User(
         email=data['email'],
-        password=hashed_password,
+        password=data['password'],  # <-- contraseña sin encriptar
         name=data['name'],
         role=data.get('role', 'student')
     )
@@ -75,8 +67,8 @@ def login():
     if not user:
         return jsonify({'message': 'Usuario no encontrado'}), 404
     
-    if check_password_hash(user.password, data['password']):
-        # Generar token JWT
+    # Comparamos texto plano
+    if user.password == data['password']:
         token = jwt.encode({
             'user_id': user.id,
             'email': user.email,
@@ -105,9 +97,9 @@ def update_profile(current_user):
     if data.get('name'):
         current_user.name = data['name']
     
-    # Actualizar contraseña si se proporciona
     if data.get('password'):
-        current_user.password = generate_password_hash(data['password'], method='sha256')
+        # Guardar contraseña sin encriptar
+        current_user.password = data['password']
     
     db.session.commit()
     

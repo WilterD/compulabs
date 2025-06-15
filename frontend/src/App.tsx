@@ -12,7 +12,7 @@ import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
-import './App.css';
+import './App.css'; // Import global styles
 
 function App() {
   return (

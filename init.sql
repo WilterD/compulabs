@@ -65,11 +65,13 @@ CREATE TABLE reservations (
 );
 
 -- Insertar usuarios de prueba
--- Contraseñas: admin123 y student123 (hasheadas con bcrypt)
+-- Contraseñas en texto plano: admin123, student123, staff123
 INSERT INTO users (email, password, name, role) VALUES
-('admin@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Admin', 'User', 'admin'),
-('student@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Student', 'User', 'student'),
-('staff@example.com', '$2b$12$tPHGOHQNmIlAJCjmV5vHxOUmB4KEy6HoGfLAQ/J3qqOFXGsA.YOLi', 'Staff', 'User', 'staff');
+('admin@example.com', 'admin123', 'Admin', 'admin'),
+('student@example.com', 'student123', 'Student', 'student'),
+('staff@example.com', 'staff123', 'Staff', 'staff');
+
+
 
 -- Insertar laboratorios de prueba
 INSERT INTO laboratories (name, location, capacity, opening_time, closing_time, description) VALUES
@@ -100,12 +102,10 @@ INSERT INTO computers (name, hostname, specs, status, laboratory_id) VALUES
 -- Insertar algunas reservas de ejemplo
 -- Nota: Ajusta las fechas según sea necesario para tener reservas en el futuro
 INSERT INTO reservations (start_time, end_time, status, user_id, computer_id) VALUES
--- Reservas para el estudiante
 (NOW() + INTERVAL 1 DAY, NOW() + INTERVAL 1 DAY + INTERVAL 2 HOUR, 'confirmed', 2, 1),
 (NOW() + INTERVAL 2 DAY, NOW() + INTERVAL 2 DAY + INTERVAL 3 HOUR, 'pending', 2, 6),
 (NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY + INTERVAL 2 HOUR, 'completed', 2, 10),
 
--- Reservas para el staff
 (NOW() + INTERVAL 3 DAY, NOW() + INTERVAL 3 DAY + INTERVAL 4 HOUR, 'confirmed', 3, 4),
 (NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY + INTERVAL 2 HOUR, 'completed', 3, 7);
 

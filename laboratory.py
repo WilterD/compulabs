@@ -16,7 +16,7 @@ class Laboratory(db.Model):
     
     # Relaciones
     computers = db.relationship('Computer', backref='laboratory', lazy=True)
-    
+
     def __repr__(self):
         return f'<Laboratory {self.name}>'
     

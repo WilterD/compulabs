@@ -214,14 +214,14 @@ const ReservationList: React.FC = () => {
                       </p>
                     </div>
                     <div className="ml-2 flex-shrink-0 flex">
-                      {activeTab === 'upcoming' && (
+                        {activeTab === 'upcoming' && reservation.status !== 'cancelled' && (
                         <button
                           onClick={() => handleCancelReservation(reservation.id)}
                           className="ml-2 px-3 py-1 border border-red-300 text-red-700 text-sm rounded-md hover:bg-red-50"
                         >
                           Cancelar
                         </button>
-                      )}
+                        )}
                     </div>
                   </div>
                   <div className="mt-2 sm:flex sm:justify-between">

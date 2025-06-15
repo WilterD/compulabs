@@ -15,14 +15,14 @@ RUN apt-get update \
 # 3. Instala requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir flask-socketio eventlet   # por si no están en el requirements
+ && pip install --no-cache-dir flask-socketio eventlet  # solo si no están en requirements.txt
 
 # 4. Copia TODO el código backend
 COPY . .
 
-# 5. Variables de entorno por defecto (se pueden sobre­escribir en compose)
-ENV DB_USERNAME=root \
-    DB_PASSWORD=password \
+# 5. Variables de entorno por defecto (se pueden sobreescribir en compose)
+ENV DB_USERNAME=reservas_user \
+    DB_PASSWORD=reservas_password \
     DB_HOST=db \
     DB_PORT=3306 \
     DB_NAME=reservas_db \
@@ -30,5 +30,5 @@ ENV DB_USERNAME=root \
 
 EXPOSE 5000
 
-# 6. Arranque
+# 6. Arranque (usando eventlet como servidor si usas SocketIO)
 CMD ["python", "main.py"]

@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   # Servicio de base de datos MySQL
   db:
@@ -12,7 +14,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - /init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # ← Ejecuta init.sql automáticamente
     networks:
       - reservas_network
     healthcheck:
@@ -21,12 +23,12 @@ services:
       timeout: 5s
       retries: 5
 
-  # Servicio de backend Flask
+  # Servicio de backend Flask con Socket.IO
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: reservas_backend      # ← aquí adentro, no fuera
+    container_name: reservas_backend
     restart: always
     depends_on:
       db:
@@ -41,7 +43,6 @@ services:
       - "5000:5000"
     networks:
       - reservas_network
-
 
   # Servicio de frontend React
   frontend:
