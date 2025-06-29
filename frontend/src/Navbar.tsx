@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
             </div>
             <div className="ml-3">
               <div className="text-base font-medium text-gray-800">{user?.name} </div>
-              <div className="text-sm text-gray-500">{user?.email}</div>
+              <div className="text-sm text-gray-500">{user?.role === 'superuser' ? 'Superusuario' : user?.role === 'admin' ? 'Administrador' : 'Usuario'}</div>
             </div>
             <button
               onClick={handleLogout}

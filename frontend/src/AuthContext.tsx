@@ -6,7 +6,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: any;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;  // Cambié void a any para retornar usuario
   register: (userData: any) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Verificar si el token es válido haciendo una solicitud al endpoint de perfil
           const response = await axios.get('http://localhost:5000/api/auth/profile');
           setUser(response.data);
+          console.log('Perfil de usuario cargado:', response.data);
           setIsAuthenticated(true);
           setToken(storedToken);
         } catch (error) {
@@ -52,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<any> => {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/login', {
         email,
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
       setIsAuthenticated(true);
       
-      return user;
+      return user;  // Retorna el usuario para usarlo después
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       throw error;

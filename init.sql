@@ -17,7 +17,7 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    role ENUM('admin', 'student', 'staff') NOT NULL DEFAULT 'student',
+    role ENUM('superuser', 'admin', 'student') NOT NULL DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -67,9 +67,9 @@ CREATE TABLE reservations (
 -- Insertar usuarios de prueba
 -- Contraseñas en texto plano: admin123, student123, staff123
 INSERT INTO users (email, password, name, role) VALUES
+('super@admin.com', 'super123', 'SuperUser', 'superuser'),
 ('admin@example.com', 'admin123', 'Admin', 'admin'),
-('student@example.com', 'student123', 'Student', 'student'),
-('staff@example.com', 'staff123', 'Staff', 'staff');
+('student@example.com', 'student123', 'Student', 'student');
 
 
 

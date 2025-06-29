@@ -12,6 +12,8 @@ import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
+import SuperUserPanel from './pages/SuperUserPanel';
+import SuperUserRoute from './components/SuperUserRoute';
 import './App.css'; // Import global styles
 
 function App() {
@@ -38,6 +40,12 @@ function App() {
                   <AdminPanel />
                 </AdminRoute>
               } />
+              <Route path="superuser" element={
+                <SuperUserRoute>
+                  <SuperUserPanel />
+                </SuperUserRoute>
+              } />
+
             </Route>
           </Routes>
         </SocketProvider>

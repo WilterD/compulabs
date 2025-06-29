@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { useSocket } from '../SocketContext';
+import SuperUserPanel from './SuperUserPanel';
 
 interface Lab {
   id: number;
@@ -31,6 +32,7 @@ interface Reservation {
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
+  if (user.role === 'superuser') return <SuperUserPanel />;
   const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState<string>('labs');
   const [labs, setLabs] = useState<Lab[]>([]);

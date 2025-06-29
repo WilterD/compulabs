@@ -16,8 +16,16 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const loggedUser = await login(email, password);
+
+      // Redirigir según el rol
+      if (loggedUser.role === 'superuser') {
+        navigate('/superuser');
+      } else if (loggedUser.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError('Error al iniciar sesión: ' + (err.response?.data?.message || 'Verifica tus credenciales'));
     } finally {

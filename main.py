@@ -2,6 +2,7 @@ import os
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
+from flask_jwt_extended import JWTManager  # <-- AÑADIDO
 from db import db
 from auth import auth_bp
 from lab import lab_bp
@@ -17,11 +18,12 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost"}})
 
 app.url_map.strict_slashes = False
 
-# Configuración base de Flask + SQLAlchemy
+# Configuración base de Flask + SQLAlchemy + JWT
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+app.config['JWT_SECRET_KEY'] = 'clave-super-secreta-para-jwt'  # <-- AÑADIDO
 app.config['SQLALCHEMY_DATABASE_URI'] = (
-    f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:"
-    f"{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:"
+    f"mysql+pymysql://{os.getenv('DB_USERNAME', 'root')}:" 
+    f"{os.getenv('DB_PASSWORD', 'password')}@{os.getenv('DB_HOST', 'localhost')}:" 
     f"{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'reservas_db')}"
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -29,21 +31,24 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Inicializar la base de datos con la app
 db.init_app(app)
 
+# Inicializar JWT
+jwt = JWTManager(app)  # <-- AÑADIDO
+
 # Inicializar SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode)
 
-# Registrar blueprints con prefijos
+# Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(lab_bp, url_prefix='/api/labs')
 app.register_blueprint(computer_bp, url_prefix='/api/computers')
 app.register_blueprint(reservation_bp, url_prefix='/api/reservations')
 
-# Ruta health-check para monitoreo simple
+# Ruta de health-check
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok", "message": "Sistema de reservas funcionando correctamente"})
 
-# Servir archivos estáticos y fallback a index.html para SPA
+# Fallback a SPA index.html
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
@@ -55,6 +60,8 @@ def serve(path):
         return send_from_directory(app.static_folder, 'index.html')
     return "index.html not found", 404
 
+# DELETE reserva directa
+from reservation import Reservation  # <-- Asegúrate de importar esto
 @app.route('/api/reservations/<int:id>', methods=['DELETE'])
 def delete_reservation(id):
     reservation = Reservation.query.get(id)
@@ -65,7 +72,6 @@ def delete_reservation(id):
     db.session.commit()
 
     return jsonify({'message': 'Reserva cancelada correctamente'}), 200
-
 
 # Eventos SocketIO
 @socketio.on('connect')
@@ -78,5 +84,5 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Crea tablas si no existen
+        db.create_all()
     socketio.run(app, host='0.0.0.0', port=5000)
