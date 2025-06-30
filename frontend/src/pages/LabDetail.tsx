@@ -23,44 +23,36 @@ interface Lab {
   closing_time: string;
 }
 
-interface ReservationFormData {
-  start_time: string;
-  end_time: string;
-  computer_id: number;
-}
-
 const LabDetail: React.FC = () => {
   const { labId } = useParams<{ labId: string }>();
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const { user: _ } = useAuth(); // Usando destructuring con renombre para evitar advertencia
-  
+  const { user: _ } = useAuth();
+
   const [lab, setLab] = useState<Lab | null>(null);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  
+
   const [showReservationForm, setShowReservationForm] = useState<boolean>(false);
   const [selectedComputer, setSelectedComputer] = useState<Computer | null>(null);
-  const [reservationData, setReservationData] = useState<ReservationFormData>({
-    start_time: '',
-    end_time: '',
-    computer_id: 0
-  });
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [reservedHours, setReservedHours] = useState<number[]>([]);
   const [reservationError, setReservationError] = useState<string>('');
   const [reservationSuccess, setReservationSuccess] = useState<string>('');
+
+  const HOURS = Array.from({ length: 12 }, (_, i) => i + 7);
 
   useEffect(() => {
     const fetchLabDetails = async () => {
       try {
-        // Obtener detalles del laboratorio
         const labResponse = await axios.get(`http://localhost:5000/api/labs/${labId}`);
         setLab(labResponse.data);
-        
-        // Obtener computadoras del laboratorio
+
         const computersResponse = await axios.get(`http://localhost:5000/api/computers/laboratory/${labId}`);
         setComputers(computersResponse.data);
-        
+
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar detalles del laboratorio:', err);
@@ -71,7 +63,6 @@ const LabDetail: React.FC = () => {
 
     fetchLabDetails();
 
-    // Escuchar actualizaciones en tiempo real
     if (socket) {
       socket.on('computer_status_update', fetchLabDetails);
     }
@@ -85,22 +76,45 @@ const LabDetail: React.FC = () => {
 
   const handleReservationClick = (computer: Computer) => {
     setSelectedComputer(computer);
-    setReservationData({
-      start_time: '',
-      end_time: '',
-      computer_id: computer.id
-    });
+    setSelectedDate('');
+    setSelectedHour(null);
     setShowReservationForm(true);
     setReservationError('');
     setReservationSuccess('');
   };
 
-  const handleReservationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setReservationData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    setSelectedHour(null);
+    setReservationError('');
+    setReservationSuccess('');
+
+    if (!date || !selectedComputer) {
+      setReservedHours([]);
+      return;
+    }
+
+    try {
+      const response = await axios.get('http://localhost:5000/api/reservations/occupied-hours', {
+        params: {
+          computer_id: selectedComputer.id,
+          date,
+        },
+      });
+
+      setReservedHours(response.data.occupied_hours || []);
+    } catch (error) {
+      console.error('Error al obtener horas reservadas:', error);
+      setReservationError('No se pudieron cargar las horas disponibles.');
+      setReservedHours([]);
+    }
+  };
+
+  const handleHourSelect = (hour: number) => {
+    setSelectedHour(hour);
+    setReservationError('');
+    setReservationSuccess('');
   };
 
   const handleReservationSubmit = async (e: React.FormEvent) => {
@@ -108,14 +122,38 @@ const LabDetail: React.FC = () => {
     setReservationError('');
     setReservationSuccess('');
 
+    if (!selectedDate) {
+      setReservationError('Por favor, selecciona una fecha');
+      return;
+    }
+    if (selectedHour === null) {
+      setReservationError('Por favor, selecciona una hora');
+      return;
+    }
+    if (!selectedComputer) {
+      setReservationError('Computadora no seleccionada');
+      return;
+    }
+
     try {
-      await axios.post('http://localhost:5000/api/reservations', reservationData);
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const start = new Date(Date.UTC(year, month - 1, day, selectedHour, 0, 0));
+      const end = new Date(Date.UTC(year, month - 1, day, selectedHour + 1, 0, 0));
+
+
+      const payload = {
+        computer_id: selectedComputer.id,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+      };
+
+      await axios.post('http://localhost:5000/api/reservations', payload);
       setReservationSuccess('Reserva creada exitosamente');
       setShowReservationForm(false);
-      
-      // Actualizar la lista de computadoras
+
       const computersResponse = await axios.get(`http://localhost:5000/api/computers/laboratory/${labId}`);
       setComputers(computersResponse.data);
+
     } catch (err: any) {
       setReservationError('Error al crear la reserva: ' + (err.response?.data?.message || 'Verifica los datos ingresados'));
     }
@@ -237,72 +275,102 @@ const LabDetail: React.FC = () => {
       )}
 
       {/* Modal de Reserva */}
-      {showReservationForm && selectedComputer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4">Reservar Computadora</h2>
-            <p className="text-gray-600 mb-4">Estás reservando: <strong>{selectedComputer.name}</strong></p>
-            
-            {reservationError && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span className="block sm:inline">{reservationError}</span>
-              </div>
-            )}
-            
-            {reservationSuccess && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span className="block sm:inline">{reservationSuccess}</span>
-              </div>
-            )}
-            
-            <form onSubmit={handleReservationSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="start_time">
-                  Fecha y hora de inicio
-                </label>
-                <input
-                  type="datetime-local"
-                  id="start_time"
-                  name="start_time"
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  value={reservationData.start_time}
-                  onChange={handleReservationChange}
-                  required
-                />
-              </div>
-              <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="end_time">
-                  Fecha y hora de fin
-                </label>
-                <input
-                  type="datetime-local"
-                  id="end_time"
-                  name="end_time"
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  value={reservationData.end_time}
-                  onChange={handleReservationChange}
-                  required
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowReservationForm(false)}
-                  className="mr-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Confirmar Reserva
-                </button>
-              </div>
-            </form>
-          </div>
+{showReservationForm && selectedComputer && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-8 max-w-md w-full">
+      <h2 className="text-2xl font-bold mb-4">Reservar Computadora</h2>
+      <p className="text-gray-600 mb-4">
+        Estás reservando: <strong>{selectedComputer.name}</strong>
+      </p>
+
+      {reservationError && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <span className="block sm:inline">{reservationError}</span>
         </div>
       )}
+
+      {reservationSuccess && (
+        <div
+          className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <span className="block sm:inline">{reservationSuccess}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleReservationSubmit}>
+        <div className="mb-4">
+          <label
+            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="date"
+          >
+            Selecciona un día
+          </label>
+          <input
+            type="date"
+            id="date"
+            name="date"
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600"
+            value={selectedDate}
+            onChange={handleDateChange}
+            required
+            min={new Date().toISOString().split('T')[0]}
+          />
+        </div>
+
+        {selectedDate && (
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Selecciona una hora
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {HOURS.map((hour) => {
+                const isOccupied = reservedHours.includes(hour);
+                const isSelected = selectedHour === hour;
+                return (
+                  <button
+                    type="button"
+                    key={hour}
+                    disabled={isOccupied}
+                    onClick={() => handleHourSelect(hour)}
+                    className={`px-3 py-2 rounded-md ${
+                      isOccupied
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : isSelected
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 hover:bg-blue-200'
+                    }`}
+                  >
+                    {hour}:00
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowReservationForm(false)}
+            className="mr-2 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Confirmar Reserva
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };

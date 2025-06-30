@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time, timedelta, date
 from flask import Blueprint, jsonify, request
 from db import db
 from auth import token_required
@@ -98,7 +98,6 @@ def cancel_reservation(current_user, reservation_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
     
-
 @reservation_bp.route('/', methods=['POST'])
 @token_required
 def create_reservation(current_user):
@@ -113,16 +112,25 @@ def create_reservation(current_user):
         
         start_time = datetime.fromisoformat(start_time_str)
         end_time = datetime.fromisoformat(end_time_str)
-        
-        # Validar tiempos (ejemplo)
+
         if start_time >= end_time:
             return jsonify({'message': 'La hora de inicio debe ser antes de la hora de fin'}), 400
+
+        # ⛔ Verificar solapamientos (reservas pendientes o confirmadas)
+        overlapping = Reservation.query.filter(
+            Reservation.computer_id == computer_id,
+            Reservation.status.in_(['pending', 'confirmed']),
+            Reservation.start_time < end_time,
+            Reservation.end_time > start_time
+        ).first()
+
+        if overlapping:
+            return jsonify({'message': 'Ya existe una reserva para esa hora'}), 409
         
-        # Crear reserva
         new_reservation = Reservation(
             start_time=start_time,
             end_time=end_time,
-            status='pending',  # o el que quieras por defecto
+            status='pending',
             user_id=current_user.id,
             computer_id=computer_id
         )
@@ -131,9 +139,100 @@ def create_reservation(current_user):
         db.session.commit()
         
         return jsonify({'message': 'Reserva creada', 'reservation': new_reservation.to_dict()}), 201
-    
+
     except Exception as e:
-        # Aquí imprime el error para que puedas ver qué pasó en consola
         print(f"Error al crear reserva: {e}")
         return jsonify({'message': 'Error interno del servidor'}), 500
 
+
+# Obtener disponibilidad de un PC en una fecha específica
+@reservation_bp.route('/availability', methods=['GET'])
+@token_required
+def get_availability(current_user):
+    """
+    Query params:
+      - computer_id (int, requerido)
+      - date (YYYY-MM-DD, requerido)
+    
+    Retorna un array con horas disponibles y ocupadas (7am a 6pm, intervalos de 1 hora).
+    """
+    computer_id = request.args.get('computer_id', type=int)
+    date_str = request.args.get('date')
+    
+    if not computer_id or not date_str:
+        return jsonify({'message': 'Faltan parámetros computer_id o date'}), 400
+    
+    try:
+        target_date = date.fromisoformat(date_str)
+    except ValueError:
+        return jsonify({'message': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
+
+    # Rango horario de 7:00 a 18:00 (6pm)
+    start_hour = 7
+    end_hour = 18
+
+    # Construimos todos los intervalos horarios posibles
+    slots = []
+    for hour in range(start_hour, end_hour):
+        slot_start = datetime.combine(target_date, time(hour, 0))
+        slot_end = slot_start + timedelta(hours=1)
+        slots.append({
+            'start': slot_start,
+            'end': slot_end,
+            'available': True
+        })
+
+    # Obtenemos reservas confirmadas o pendientes en ese día y pc
+    reservations = Reservation.query.filter(
+        Reservation.computer_id == computer_id,
+        Reservation.status.in_(['pending', 'confirmed']),
+        Reservation.start_time >= datetime.combine(target_date, time(0, 0)),
+        Reservation.end_time <= datetime.combine(target_date, time(23, 59, 59))
+    ).all()
+
+    # Marcar como no disponibles los slots que intersectan con reservas existentes
+    for slot in slots:
+        for r in reservations:
+            # Si hay intersección entre slot y reserva
+            if not (slot['end'] <= r.start_time or slot['start'] >= r.end_time):
+                slot['available'] = False
+                break
+
+    # Convertir datetime a string ISO para frontend
+    result = [
+        {
+            'start': s['start'].isoformat(),
+            'end': s['end'].isoformat(),
+            'available': s['available']
+        }
+        for s in slots
+    ]
+
+    return jsonify(result)
+
+@reservation_bp.route('/occupied-hours', methods=['GET'])
+@token_required
+def get_occupied_hours(current_user):
+    computer_id = request.args.get('computer_id', type=int)
+    date_str = request.args.get('date')
+
+    if not computer_id or not date_str:
+        return jsonify({'message': 'Parámetros inválidos'}), 400
+
+    try:
+        date = datetime.fromisoformat(date_str).date()
+    except ValueError:
+        return jsonify({'message': 'Fecha inválida'}), 400
+
+    start_of_day = datetime.combine(date, datetime.min.time())
+    end_of_day = datetime.combine(date, datetime.max.time())
+
+    reservations = Reservation.query.filter(
+        Reservation.computer_id == computer_id,
+        Reservation.status.in_(['pending', 'confirmed']),
+        Reservation.start_time >= start_of_day,
+        Reservation.start_time <= end_of_day
+    ).all()
+
+    occupied_hours = sorted({res.start_time.hour for res in reservations})
+    return jsonify({'occupied_hours': occupied_hours})

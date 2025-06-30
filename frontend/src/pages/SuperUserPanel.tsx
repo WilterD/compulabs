@@ -16,7 +16,7 @@ const SuperUserPanel = () => {
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get<Admin[]>('/api/users?role=admin', {
+      const response = await axios.get<Admin[]>('/api/superuser/admins', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAdmins(response.data);
@@ -32,7 +32,7 @@ const SuperUserPanel = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/users/admin', newAdmin, {
+      const response = await axios.post('/api/superuser/create-admin', newAdmin, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

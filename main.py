@@ -1,13 +1,14 @@
 import os
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, request, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager  # <-- AÑADIDO
 from db import db
-from auth import auth_bp
+from auth import auth_bp, token_required
 from lab import lab_bp
 from computer import computer_bp
 from reservation import reservation_bp
+from user import User
 
 async_mode = 'eventlet'
 
@@ -43,6 +44,41 @@ app.register_blueprint(lab_bp, url_prefix='/api/labs')
 app.register_blueprint(computer_bp, url_prefix='/api/computers')
 app.register_blueprint(reservation_bp, url_prefix='/api/reservations')
 
+@app.route('/api/superuser/admins', methods=['GET'])
+@token_required
+def listar_admins(current_user):
+    if current_user.role != 'superuser':
+        return jsonify({'message': 'Acceso denegado'}), 403
+    admins = User.query.filter_by(role='admin').all()
+    return jsonify([admin.to_dict() for admin in admins]), 200
+
+@app.route('/api/superuser/create-admin', methods=['POST'])
+@token_required
+def crear_admin(current_user):
+    if current_user.role != 'superuser':
+        return jsonify({'message': 'Acceso denegado'}), 403
+    
+    data = request.get_json()
+    
+    if not data or not data.get('email') or not data.get('password') or not data.get('name'):
+        return jsonify({'message': 'Datos incompletos'}), 400
+
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({'message': 'El usuario ya existe'}), 409
+
+    new_user = User(
+        email=data['email'],
+        password=data['password'],
+        name=data['name'],
+        role='admin'
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'Administrador creado exitosamente'}), 201
+
+
 # Ruta de health-check
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -60,18 +96,6 @@ def serve(path):
         return send_from_directory(app.static_folder, 'index.html')
     return "index.html not found", 404
 
-# DELETE reserva directa
-from reservation import Reservation  # <-- Asegúrate de importar esto
-@app.route('/api/reservations/<int:id>', methods=['DELETE'])
-def delete_reservation(id):
-    reservation = Reservation.query.get(id)
-    if not reservation:
-        return jsonify({'error': 'Reserva no encontrada'}), 404
-
-    db.session.delete(reservation)
-    db.session.commit()
-
-    return jsonify({'message': 'Reserva cancelada correctamente'}), 200
 
 # Eventos SocketIO
 @socketio.on('connect')

@@ -86,6 +86,16 @@ def create_admin(current_user):
 
     return jsonify({'message': 'Administrador creado exitosamente'}), 201
 
+# Visualizar administradores (solo superuser)
+@auth_bp.route('/admins', methods=['GET'])
+@token_required
+def get_admins(current_user):
+    if current_user.role != 'superuser':
+        return jsonify({'message': 'Acceso denegado: solo el superusuario puede ver administradores'}), 403
+
+    admins = User.query.filter_by(role='admin').all()
+    return jsonify([admin.to_dict() for admin in admins]), 200
+
 # Login
 @auth_bp.route('/login', methods=['POST'])
 def login():
