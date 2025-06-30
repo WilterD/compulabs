@@ -12,11 +12,12 @@ const SuperUserPanel = () => {
   const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get<Admin[]>('/api/superuser/admins', {
+      const response = await axios.get<Admin[]>(`${API_BASE_URL}/superuser/admins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAdmins(response.data);
@@ -32,7 +33,7 @@ const SuperUserPanel = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/superuser/create-admin', newAdmin, {
+      const response = await axios.post(`${API_BASE_URL}/superuser/create-admin`, newAdmin, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

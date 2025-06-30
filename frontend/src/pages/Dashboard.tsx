@@ -7,6 +7,8 @@ import SuperUserPanel from './SuperUserPanel';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+
+
   
   console.log('Usuario desde contexto:', user);
 
@@ -45,12 +47,14 @@ if (user?.role === 'superuser') {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const labsResponse = await axios.get('http://localhost:5000/api/labs');
-        const computersResponse = await axios.get('http://localhost:5000/api/computers/available');
-        const reservationsResponse = await axios.get('http://localhost:5000/api/reservations');
+        const labsResponse = await axios.get(`${API_BASE_URL}/labs`);
+        const computersResponse = await axios.get(`${API_BASE_URL}/computers/available`);
+        const reservationsResponse = await axios.get(`${API_BASE_URL}/reservations`);
 
         const now = new Date();
         const upcomingReservations = reservationsResponse.data.filter(
@@ -76,7 +80,7 @@ if (user?.role === 'superuser') {
 
     if (socket) {
       socket.on('computer_status_update', () => {
-        axios.get('http://localhost:5000/api/computers/available')
+        axios.get(`${API_BASE_URL}/computers/available`)
           .then(response => {
             setStats(prev => ({
               ...prev,
@@ -87,7 +91,7 @@ if (user?.role === 'superuser') {
       });
 
       socket.on('reservation_update', () => {
-        axios.get('http://localhost:5000/api/reservations')
+        axios.get(`${API_BASE_URL}/reservations`)
           .then(response => {
             const now = new Date();
             const upcomingReservations = response.data.filter(

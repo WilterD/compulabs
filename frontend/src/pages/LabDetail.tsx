@@ -42,15 +42,17 @@ const LabDetail: React.FC = () => {
   const [reservationError, setReservationError] = useState<string>('');
   const [reservationSuccess, setReservationSuccess] = useState<string>('');
 
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+
   const HOURS = Array.from({ length: 12 }, (_, i) => i + 7);
 
   useEffect(() => {
     const fetchLabDetails = async () => {
       try {
-        const labResponse = await axios.get(`http://localhost:5000/api/labs/${labId}`);
+        const labResponse = await axios.get(`${API_BASE_URL}/labs/${labId}`);
         setLab(labResponse.data);
 
-        const computersResponse = await axios.get(`http://localhost:5000/api/computers/laboratory/${labId}`);
+        const computersResponse = await axios.get(`${API_BASE_URL}/computers/laboratory/${labId}`);
         setComputers(computersResponse.data);
 
         setLoading(false);
@@ -96,7 +98,7 @@ const LabDetail: React.FC = () => {
     }
 
     try {
-      const response = await axios.get('http://localhost:5000/api/reservations/occupied-hours', {
+      const response = await axios.get(`${API_BASE_URL}/reservations/occupied-hours`, {
         params: {
           computer_id: selectedComputer.id,
           date,
@@ -147,11 +149,11 @@ const LabDetail: React.FC = () => {
         end_time: end.toISOString(),
       };
 
-      await axios.post('http://localhost:5000/api/reservations', payload);
+      await axios.post(`${API_BASE_URL}/reservations`, payload);
       setReservationSuccess('Reserva creada exitosamente');
       setShowReservationForm(false);
 
-      const computersResponse = await axios.get(`http://localhost:5000/api/computers/laboratory/${labId}`);
+      const computersResponse = await axios.get(`${API_BASE_URL}/computers/laboratory/${labId}`);
       setComputers(computersResponse.data);
 
     } catch (err: any) {

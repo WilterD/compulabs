@@ -28,22 +28,23 @@ const ReservationList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('upcoming');
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/reservations');
+        const response = await axios.get(`${API_BASE_URL}/reservations`);
         
         // Obtener detalles de computadoras para cada reserva
         const reservationsWithDetails = await Promise.all(
           response.data.map(async (reservation: Reservation) => {
             try {
-              const computerResponse = await axios.get(`http://localhost:5000/api/computers/${reservation.computer_id}`);
+              const computerResponse = await axios.get(`${API_BASE_URL}/computers/${reservation.computer_id}`);
               const computer = computerResponse.data;
               
               // Obtener detalles del laboratorio
-              const labResponse = await axios.get(`http://localhost:5000/api/labs/${computer.laboratory_id}`);
-              
+              const labResponse = await axios.get(`${API_BASE_URL}/labs/${computer.laboratory_id}`);
+
               return {
                 ...reservation,
                 computer: computer,
@@ -81,8 +82,8 @@ const ReservationList: React.FC = () => {
 
   const handleCancelReservation = async (reservationId: number) => {
     try {
-      await axios.delete(`http://localhost:5000/api/reservations/${reservationId}`);
-      
+      await axios.delete(`${API_BASE_URL}/reservations/${reservationId}`);
+
       // Actualizar la lista de reservas
       setReservations(prevReservations => 
         prevReservations.filter(reservation => reservation.id !== reservationId)

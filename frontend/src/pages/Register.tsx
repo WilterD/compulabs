@@ -13,6 +13,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -40,7 +41,7 @@ const Register: React.FC = () => {
         name: formData.name,
         role: 'student' // Por defecto, todos los usuarios nuevos son estudiantes
       });
-      navigate('/dashboard');
+      navigate(`${API_BASE_URL}/dashboard`);
     } catch (err: any) {
       setError('Error al registrar: ' + (err.response?.data?.message || 'Verifica tus datos'));
     } finally {
@@ -121,7 +122,7 @@ const Register: React.FC = () => {
             <span className="text-gray-600">¿Ya tienes una cuenta? </span>
             <button
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(`${API_BASE_URL}/login`)}
               className="text-blue-600 hover:underline"
             >
               Inicia sesión

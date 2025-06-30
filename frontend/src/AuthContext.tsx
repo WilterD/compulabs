@@ -23,6 +23,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState<boolean>(true);
+  
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -33,7 +35,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
           
           // Verificar si el token es válido haciendo una solicitud al endpoint de perfil
-          const response = await axios.get('http://localhost:5000/api/auth/profile');
+          const response = await axios.get(`${API_BASE_URL}/auth/profile`);
           setUser(response.data);
           console.log('Perfil de usuario cargado:', response.data);
           setIsAuthenticated(true);
@@ -55,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<any> => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password
       });
@@ -76,9 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+
+
   const register = async (userData: any) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/register', userData);
+      await axios.post(`${API_BASE_URL}/auth/register`, userData);
       // Después del registro exitoso, iniciar sesión automáticamente
       await login(userData.email, userData.password);
     } catch (error) {

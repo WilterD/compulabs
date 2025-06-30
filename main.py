@@ -14,9 +14,10 @@ async_mode = 'eventlet'
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
-# Permitir CORS solo desde localhost para rutas /api/*
-CORS(app, resources={r"/api/*": {"origins": "http://localhost"}})
+# Configuración de CORS
+CORS(app)
 
+# Configuración de URL sin barras finales
 app.url_map.strict_slashes = False
 
 # Configuración base de Flask + SQLAlchemy + JWT

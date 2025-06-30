@@ -18,11 +18,12 @@ const LabList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const { socket } = useSocket();
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
   useEffect(() => {
     const fetchLabs = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/labs');
+        const response = await axios.get(`${API_BASE_URL}/labs`);
         setLabs(response.data);
         setLoading(false);
       } catch (err) {

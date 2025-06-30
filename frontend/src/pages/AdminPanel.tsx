@@ -59,19 +59,21 @@ const AdminPanel: React.FC = () => {
     laboratory_id: 0
   });
 
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
         if (activeTab === 'labs') {
-          const response = await axios.get('http://localhost:5000/api/labs');
+          const response = await axios.get(`${API_BASE_URL}/labs`);
           setLabs(response.data);
         } else if (activeTab === 'computers') {
-          const response = await axios.get('http://localhost:5000/api/computers');
+          const response = await axios.get(`${API_BASE_URL}/computers`);
           setComputers(response.data);
         } else if (activeTab === 'reservations') {
-          const response = await axios.get('http://localhost:5000/api/reservations/all');
+          const response = await axios.get(`${API_BASE_URL}/reservations/all`);
           setReservations(response.data);
         }
         
@@ -126,10 +128,10 @@ const AdminPanel: React.FC = () => {
   const handleLabSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/labs', labFormData);
+      await axios.post(`${API_BASE_URL}/labs`, labFormData);
       setShowLabForm(false);
       // Recargar laboratorios
-      const response = await axios.get('http://localhost:5000/api/labs');
+      const response = await axios.get(`${API_BASE_URL}/labs`);
       setLabs(response.data);
     } catch (err) {
       console.error('Error al crear laboratorio:', err);
@@ -140,14 +142,14 @@ const AdminPanel: React.FC = () => {
   const handleComputerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/computers', {
+      await axios.post(`${API_BASE_URL}/computers`, {
         ...computerFormData,
         specs: JSON.stringify({ description: computerFormData.specs }),
         status: 'available'
       });
       setShowComputerForm(false);
       // Recargar computadoras
-      const response = await axios.get('http://localhost:5000/api/computers');
+      const response = await axios.get(`${API_BASE_URL}/computers`);
       setComputers(response.data);
     } catch (err) {
       console.error('Error al crear computadora:', err);
@@ -158,7 +160,7 @@ const AdminPanel: React.FC = () => {
   const handleDeleteLab = async (labId: number) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este laboratorio? Esta acción no se puede deshacer.')) {
       try {
-        await axios.delete(`http://localhost:5000/api/labs/${labId}`);
+        await axios.delete(`${API_BASE_URL}/labs/${labId}`);
         setLabs(labs.filter(lab => lab.id !== labId));
       } catch (err) {
         console.error('Error al eliminar laboratorio:', err);
@@ -170,7 +172,7 @@ const AdminPanel: React.FC = () => {
   const handleDeleteComputer = async (computerId: number) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta computadora? Esta acción no se puede deshacer.')) {
       try {
-        await axios.delete(`http://localhost:5000/api/computers/${computerId}`);
+        await axios.delete(`${API_BASE_URL}/computers/${computerId}`);
         setComputers(computers.filter(computer => computer.id !== computerId));
       } catch (err) {
         console.error('Error al eliminar computadora:', err);
@@ -181,7 +183,7 @@ const AdminPanel: React.FC = () => {
 
   const handleUpdateComputerStatus = async (computerId: number, status: string) => {
     try {
-      await axios.put(`http://localhost:5000/api/computers/${computerId}/status`, { status });
+      await axios.put(`${API_BASE_URL}/computers/${computerId}/status`, { status });
       // Actualizar el estado en la lista local
       setComputers(computers.map(computer => 
         computer.id === computerId ? { ...computer, status } : computer

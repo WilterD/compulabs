@@ -16,10 +16,13 @@ interface SocketProviderProps {
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
+  
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+
 
   useEffect(() => {
     // Inicializar la conexión de Socket.io
-    const socketInstance = io('http://localhost:5000', {
+    const socketInstance = io(API_BASE_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
