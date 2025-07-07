@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 from auth import token_required
 from db import db
+from socket_manager import socketio
 
 computer_bp = Blueprint('computers', __name__)
 
@@ -70,15 +71,50 @@ def update_computer_status(current_user, computer_id):
     data = request.get_json()
     new_status = data.get('status')
 
-    valid_statuses = ['available', 'maintenance', 'reserved']
-    if new_status not in valid_statuses:
+    if new_status not in ['available', 'maintenance', 'reserved']:
         return jsonify({'message': 'Estado inválido'}), 400
 
     computer = Computer.query.get(computer_id)
     if not computer:
         return jsonify({'message': 'Computadora no encontrada'}), 404
 
+    old_status = computer.status
     computer.status = new_status
     db.session.commit()
 
-    return jsonify({'message': f'Computadora {computer_id} actualizada a {new_status}', 'computer': computer.to_dict()})
+    # Emitir evento de actualización en tiempo real
+    socketio.emit('computer_status_updated', {
+        'computer_id': computer_id,
+        'old_status': old_status,
+        'new_status': new_status,
+        'laboratory_id': computer.laboratory_id
+    })
+
+    return jsonify({'message': f'Estado de computadora {computer_id} actualizado a {new_status}', 'computer': computer.to_dict()})
+
+@computer_bp.route('/<int:computer_id>', methods=['DELETE'])
+@token_required
+def delete_computer(current_user, computer_id):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
+
+    computer = Computer.query.get(computer_id)
+    if not computer:
+        return jsonify({'message': 'Computadora no encontrada'}), 404
+
+    laboratory_id = computer.laboratory_id
+    
+    try:
+        db.session.delete(computer)
+        db.session.commit()
+        
+        # Emitir evento de eliminación en tiempo real
+        socketio.emit('computer_deleted', {
+            'computer_id': computer_id,
+            'laboratory_id': laboratory_id
+        })
+        
+        return jsonify({'message': f'Computadora {computer_id} eliminada correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

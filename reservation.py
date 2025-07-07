@@ -2,6 +2,9 @@ from datetime import datetime, time, timedelta, date
 from flask import Blueprint, jsonify, request
 from db import db
 from auth import token_required
+from socket_manager import socketio
+from computer import Computer
+import requests
 
 reservation_bp = Blueprint('reservations', __name__)
 
@@ -18,6 +21,15 @@ class Reservation(db.Model):
     computer_id = db.Column(db.Integer, db.ForeignKey('computers.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __init__(self, start_time, end_time, status='pending', user_id=None, computer_id=None, recurring=False, recurrence_pattern=None):
+        self.start_time = start_time
+        self.end_time = end_time
+        self.status = status
+        self.user_id = user_id
+        self.computer_id = computer_id
+        self.recurring = recurring
+        self.recurrence_pattern = recurrence_pattern
     
     def __repr__(self):
         return f'<Reservation {self.id}>'
@@ -70,8 +82,17 @@ def update_reservation_status(current_user, reservation_id):
     if not reservation:
         return jsonify({'message': 'Reserva no encontrada'}), 404
 
+    old_status = reservation.status
     reservation.status = new_status
     db.session.commit()
+
+    # Emitir evento de actualización en tiempo real
+    socketio.emit('reservation_status_updated', {
+        'reservation_id': reservation_id,
+        'old_status': old_status,
+        'new_status': new_status,
+        'user_id': reservation.user_id
+    })
 
     return jsonify({'message': f'Reserva {reservation_id} actualizada a {new_status}', 'reservation': reservation.to_dict()})
 
@@ -236,3 +257,129 @@ def get_occupied_hours(current_user):
 
     occupied_hours = sorted({res.start_time.hour for res in reservations})
     return jsonify({'occupied_hours': occupied_hours})
+
+@reservation_bp.route('/<int:reservation_id>/confirm', methods=['PUT'])
+@token_required
+def confirm_reservation(current_user, reservation_id):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
+
+    reservation = Reservation.query.get(reservation_id)
+    if not reservation:
+        return jsonify({'message': 'Reserva no encontrada'}), 404
+
+    if reservation.status != 'pending':
+        return jsonify({'message': 'Solo se pueden confirmar reservas pendientes'}), 400
+
+    # Obtener la computadora asociada
+    computer = Computer.query.get(reservation.computer_id)
+    if computer:
+        # Cambiar el estado de la computadora a 'reserved'
+        computer.status = 'reserved'
+        db.session.add(computer)
+
+    reservation.status = 'confirmed'
+    db.session.commit()
+
+    # Emitir eventos de actualización en tiempo real
+    socketio.emit('reservation_status_updated', {
+        'reservation_id': reservation_id,
+        'new_status': 'confirmed',
+        'user_id': reservation.user_id
+    })
+
+    # Emitir evento de actualización de computadora
+    if computer:
+        socketio.emit('computer_status_updated', {
+            'computer_id': computer.id,
+            'old_status': 'available',
+            'new_status': 'reserved',
+            'laboratory_id': computer.laboratory_id
+        })
+
+    return jsonify({'message': 'Reserva confirmada exitosamente', 'reservation': reservation.to_dict()})
+
+@reservation_bp.route('/<int:reservation_id>/cancel', methods=['PUT'])
+@token_required
+def cancel_reservation_admin(current_user, reservation_id):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
+
+    reservation = Reservation.query.get(reservation_id)
+    if not reservation:
+        return jsonify({'message': 'Reserva no encontrada'}), 404
+
+    if reservation.status not in ['pending', 'confirmed']:
+        return jsonify({'message': 'No se puede cancelar una reserva ya cancelada'}), 400
+
+    # Obtener la computadora asociada
+    computer = Computer.query.get(reservation.computer_id)
+    old_computer_status = computer.status if computer else None
+
+    reservation.status = 'cancelled'
+    
+    # Si la computadora estaba reservada por esta reserva, cambiarla a disponible
+    if computer and old_computer_status == 'reserved':
+        # Verificar si hay otras reservas confirmadas para esta computadora
+        other_confirmed_reservations = Reservation.query.filter(
+            Reservation.computer_id == computer.id,
+            Reservation.status == 'confirmed',
+            Reservation.id != reservation_id
+        ).count()
+        
+        if other_confirmed_reservations == 0:
+            computer.status = 'available'
+            db.session.add(computer)
+
+    db.session.commit()
+
+    # Emitir eventos de actualización en tiempo real
+    socketio.emit('reservation_status_updated', {
+        'reservation_id': reservation_id,
+        'new_status': 'cancelled',
+        'user_id': reservation.user_id
+    })
+
+    # Emitir evento de actualización de computadora si cambió de estado
+    if computer and old_computer_status != computer.status:
+        socketio.emit('computer_status_updated', {
+            'computer_id': computer.id,
+            'old_status': old_computer_status,
+            'new_status': computer.status,
+            'laboratory_id': computer.laboratory_id
+        })
+
+    return jsonify({'message': 'Reserva cancelada exitosamente', 'reservation': reservation.to_dict()})
+
+@reservation_bp.route('/user/<int:user_id>', methods=['GET'])
+@token_required
+def get_user_reservations_by_id(current_user, user_id):
+    # Los usuarios solo pueden ver sus propias reservas, excepto los admins
+    if current_user.id != user_id and current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado'}), 403
+
+    reservations = Reservation.query.filter_by(user_id=user_id).order_by(Reservation.created_at.desc()).all()
+    
+    # Obtener detalles completos para cada reserva
+    reservations_with_details = []
+    for reservation in reservations:
+        try:
+            # Obtener detalles de la computadora
+            computer_response = requests.get(f'{request.host_url.rstrip("/")}/api/computers/{reservation.computer_id}')
+            computer = computer_response.json() if computer_response.status_code == 200 else None
+            
+            # Obtener detalles del laboratorio si la computadora existe
+            laboratory = None
+            if computer:
+                lab_response = requests.get(f'{request.host_url.rstrip("/")}/api/labs/{computer["laboratory_id"]}')
+                laboratory = lab_response.json() if lab_response.status_code == 200 else None
+
+            reservation_data = reservation.to_dict()
+            reservation_data['computer'] = computer
+            reservation_data['laboratory'] = laboratory
+            reservations_with_details.append(reservation_data)
+        except Exception as e:
+            print(f"Error al obtener detalles para la reserva {reservation.id}: {e}")
+            reservations_with_details.append(reservation.to_dict())
+
+    return jsonify(reservations_with_details)

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSocket } from '../SocketContext';
+import { useAuth } from '../AuthContext';
+import { cleanText } from '../utils/unicode';
 
 interface Reservation {
   id: number;
@@ -29,35 +31,13 @@ const ReservationList: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('upcoming');
   const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/reservations`);
-        
-        // Obtener detalles de computadoras para cada reserva
-        const reservationsWithDetails = await Promise.all(
-          response.data.map(async (reservation: Reservation) => {
-            try {
-              const computerResponse = await axios.get(`${API_BASE_URL}/computers/${reservation.computer_id}`);
-              const computer = computerResponse.data;
-              
-              // Obtener detalles del laboratorio
-              const labResponse = await axios.get(`${API_BASE_URL}/labs/${computer.laboratory_id}`);
-
-              return {
-                ...reservation,
-                computer: computer,
-                laboratory: labResponse.data
-              };
-            } catch (err) {
-              console.error(`Error al obtener detalles para la reserva ${reservation.id}:`, err);
-              return reservation;
-            }
-          })
-        );
-        
-        setReservations(reservationsWithDetails);
+        const response = await axios.get(`${API_BASE_URL}/reservations/user/${user?.id}`);
+        setReservations(response.data);
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar reservas:', err);
@@ -66,19 +46,38 @@ const ReservationList: React.FC = () => {
       }
     };
 
-    fetchReservations();
+    if (user) {
+      fetchReservations();
+    }
 
     // Escuchar actualizaciones en tiempo real
-    if (socket) {
+    if (socket && user) {
       socket.on('reservation_update', fetchReservations);
+      
+      // Escuchar actualizaciones específicas de estado de reservas
+      socket.on('reservation_status_updated', (data) => {
+        console.log('Estado de reserva actualizado en tiempo real:', data);
+        
+        // Solo actualizar si la reserva pertenece al usuario actual
+        if (data.user_id === user.id) {
+          setReservations(prevReservations => 
+            prevReservations.map(reservation => 
+              reservation.id === data.reservation_id 
+                ? { ...reservation, status: data.new_status }
+                : reservation
+            )
+          );
+        }
+      });
     }
 
     return () => {
       if (socket) {
         socket.off('reservation_update');
+        socket.off('reservation_status_updated');
       }
     };
-  }, [socket]);
+  }, [user, socket]);
 
   const handleCancelReservation = async (reservationId: number) => {
     try {
@@ -200,7 +199,7 @@ const ReservationList: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <p className="text-sm font-medium text-blue-600 truncate">
-                        {reservation.computer?.name || `Computadora #${reservation.computer_id}`}
+                        {reservation.computer?.name ? cleanText(reservation.computer.name) : `Computadora #${reservation.computer_id}`}
                       </p>
                       <p className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         reservation.status === 'confirmed' ? 'bg-green-100 text-green-800' :
@@ -231,14 +230,14 @@ const ReservationList: React.FC = () => {
                         <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
-                        {reservation.laboratory?.name || 'Laboratorio no especificado'}
+                        {reservation.laboratory?.name ? cleanText(reservation.laboratory.name) : 'Laboratorio no especificado'}
                       </p>
                       <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                         <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
-                        {reservation.laboratory?.location || 'Ubicación no especificada'}
+                        {reservation.laboratory?.location ? cleanText(reservation.laboratory.location) : 'Ubicación no especificada'}
                       </p>
                     </div>
                     <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">

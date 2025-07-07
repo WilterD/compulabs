@@ -143,3 +143,16 @@ def update_profile(current_user):
     db.session.commit()
 
     return jsonify({'message': 'Perfil actualizado exitosamente', 'user': current_user.to_dict()}), 200
+
+# Obtener usuario por ID (solo admin y superuser)
+@auth_bp.route('/users/<int:user_id>', methods=['GET'])
+@token_required
+def get_user_by_id(current_user, user_id):
+    if current_user.role not in ['admin', 'superuser']:
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin o superuser'}), 403
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
+    return jsonify(user.to_dict()), 200

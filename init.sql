@@ -1,8 +1,7 @@
 -- Script de inicialización de la base de datos para el Sistema de Reserva de Computadoras
 -- Este script crea las tablas necesarias y añade datos iniciales para pruebas
 
--- Crear la base de datos si no existe
-CREATE DATABASE IF NOT EXISTS reservas_db;
+-- Usar la base de datos que ya fue creada por las variables de entorno
 USE reservas_db;
 
 -- Eliminar tablas si existen para evitar conflictos
@@ -20,7 +19,7 @@ CREATE TABLE users (
     role ENUM('superuser', 'admin', 'student') NOT NULL DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Crear tabla de laboratorios
 CREATE TABLE laboratories (
@@ -33,7 +32,7 @@ CREATE TABLE laboratories (
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Crear tabla de computadoras
 CREATE TABLE computers (
@@ -46,7 +45,7 @@ CREATE TABLE computers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (laboratory_id) REFERENCES laboratories(id) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Crear tabla de reservas
 CREATE TABLE reservations (
@@ -62,7 +61,7 @@ CREATE TABLE reservations (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (computer_id) REFERENCES computers(id) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Insertar usuarios de prueba
 -- Contraseñas en texto plano: admin123, student123, staff123

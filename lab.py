@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from db import db
 from laboratory import Laboratory
 from auth import token_required
+from socket_manager import socketio
 
 lab_bp = Blueprint('labs', __name__)  # NO url_prefix aquí
 
@@ -75,10 +76,22 @@ def update_lab(current_user, lab_id):
 @token_required
 def delete_lab(current_user, lab_id):
     if current_user.role != 'admin':
-        return jsonify({'message': 'No autorizado'}), 403
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
 
-    lab = Laboratory.query.get_or_404(lab_id)
-    db.session.delete(lab)
-    db.session.commit()
+    lab = Laboratory.query.get(lab_id)
+    if not lab:
+        return jsonify({'message': 'Laboratorio no encontrado'}), 404
 
-    return jsonify({'message': 'Laboratorio eliminado exitosamente'}), 200
+    try:
+        db.session.delete(lab)
+        db.session.commit()
+        
+        # Emitir evento de eliminación en tiempo real
+        socketio.emit('lab_deleted', {
+            'lab_id': lab_id
+        })
+        
+        return jsonify({'message': f'Laboratorio {lab_id} eliminado correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

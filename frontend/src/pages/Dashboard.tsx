@@ -8,8 +8,6 @@ import SuperUserPanel from './SuperUserPanel';
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
-
-  
   console.log('Usuario desde contexto:', user);
 
   // Mostrar mensaje mientras se carga usuario
@@ -22,16 +20,15 @@ const Dashboard: React.FC = () => {
   }
 
   // Mostrar panel del superusuario
-if (user?.role === 'superuser') {
-  console.log('Redirigiendo a panel de superusuario');
-  return <SuperUserPanel />;
-}
+  if (user?.role === 'superuser') {
+    console.log('Redirigiendo a panel de superusuario');
+    return <SuperUserPanel />;
+  }
 
   // Mostrar panel del admin
   if (user.role === 'admin') {
     console.log('Redirigiendo a panel de administrador');
     return <AdminPanel />;
-
   }
 
   // --- Dashboard para usuarios normales (students) ---
@@ -79,7 +76,11 @@ if (user?.role === 'superuser') {
     fetchDashboardData();
 
     if (socket) {
-      socket.on('computer_status_update', () => {
+      // Escuchar actualizaciones de estado de computadoras
+      socket.on('computer_status_updated', (data) => {
+        console.log('Estado de computadora actualizado en tiempo real:', data);
+        
+        // Actualizar el contador de computadoras disponibles
         axios.get(`${API_BASE_URL}/computers/available`)
           .then(response => {
             setStats(prev => ({
@@ -90,6 +91,41 @@ if (user?.role === 'superuser') {
           .catch(err => console.error('Error al actualizar computadoras disponibles:', err));
       });
 
+      // Escuchar actualizaciones de estado de reservas (cuando admin aprueba/cancela)
+      socket.on('reservation_status_updated', (data) => {
+        console.log('Estado de reserva actualizado en tiempo real:', data);
+        
+        // Solo actualizar si la reserva pertenece al usuario actual
+        if (data.user_id === user.id) {
+          // Actualizar contadores de reservas
+          axios.get(`${API_BASE_URL}/reservations`)
+            .then(response => {
+              const now = new Date();
+              const upcomingReservations = response.data.filter(
+                (reservation: any) => new Date(reservation.start_time) > now
+              );
+
+              setStats(prev => ({
+                ...prev,
+                totalReservations: response.data.length,
+                upcomingReservations: upcomingReservations.length
+              }));
+            })
+            .catch(err => console.error('Error al actualizar reservas:', err));
+        }
+        
+        // También actualizar computadoras disponibles (por si la reserva afecta el estado)
+        axios.get(`${API_BASE_URL}/computers/available`)
+          .then(response => {
+            setStats(prev => ({
+              ...prev,
+              availableComputers: response.data.length
+            }));
+          })
+          .catch(err => console.error('Error al actualizar computadoras disponibles:', err));
+      });
+
+      // Escuchar actualizaciones de reservas
       socket.on('reservation_update', () => {
         axios.get(`${API_BASE_URL}/reservations`)
           .then(response => {
@@ -110,11 +146,12 @@ if (user?.role === 'superuser') {
 
     return () => {
       if (socket) {
-        socket.off('computer_status_update');
+        socket.off('computer_status_updated');
+        socket.off('reservation_status_updated');
         socket.off('reservation_update');
       }
     };
-  }, [socket]);
+  }, [socket, user.id]);
 
   if (loading) {
     return (

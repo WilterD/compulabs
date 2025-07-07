@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useSocket } from '../SocketContext';
 import { useAuth } from '../AuthContext';
+import { cleanText } from '../utils/unicode';
 
 interface Computer {
   id: number;
@@ -67,14 +68,55 @@ const LabDetail: React.FC = () => {
 
     if (socket) {
       socket.on('computer_status_update', fetchLabDetails);
+      
+      // Escuchar actualizaciones específicas de estado de computadoras
+      socket.on('computer_status_updated', (data) => {
+        console.log('Estado de computadora actualizado en tiempo real:', data);
+        
+        // Solo actualizar si la computadora pertenece a este laboratorio
+        if (data.laboratory_id === parseInt(labId || '0')) {
+          setComputers(prevComputers => 
+            prevComputers.map(computer => 
+              computer.id === data.computer_id 
+                ? { ...computer, status: data.new_status }
+                : computer
+            )
+          );
+        }
+      });
+      
+      // Escuchar eliminación de computadoras
+      socket.on('computer_deleted', (data) => {
+        console.log('Computadora eliminada en tiempo real:', data);
+        
+        // Solo actualizar si la computadora pertenece a este laboratorio
+        if (data.laboratory_id === parseInt(labId || '0')) {
+          setComputers(prevComputers => 
+            prevComputers.filter(computer => computer.id !== data.computer_id)
+          );
+        }
+      });
+      
+      // Escuchar eliminación de laboratorios
+      socket.on('lab_deleted', (data) => {
+        console.log('Laboratorio eliminado en tiempo real:', data);
+        
+        // Si se elimina este laboratorio, redirigir a la lista
+        if (data.lab_id === parseInt(labId || '0')) {
+          navigate('/labs');
+        }
+      });
     }
 
     return () => {
       if (socket) {
         socket.off('computer_status_update');
+        socket.off('computer_status_updated');
+        socket.off('computer_deleted');
+        socket.off('lab_deleted');
       }
     };
-  }, [labId, socket]);
+  }, [labId, socket, navigate]);
 
   const handleReservationClick = (computer: Computer) => {
     setSelectedComputer(computer);
@@ -197,8 +239,8 @@ const LabDetail: React.FC = () => {
 
       {lab && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">{lab.name}</h1>
-          <p className="text-gray-600 mt-2">{lab.description || 'Sin descripción'}</p>
+          <h1 className="text-3xl font-bold text-gray-800">{cleanText(lab.name)}</h1>
+          <p className="text-gray-600 mt-2">{cleanText(lab.description) || 'Sin descripción'}</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="flex items-center text-gray-600">
@@ -206,7 +248,7 @@ const LabDetail: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              <span>{lab.location}</span>
+              <span>{cleanText(lab.location)}</span>
             </div>
             <div className="flex items-center text-gray-600">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -243,7 +285,7 @@ const LabDetail: React.FC = () => {
             >
               <div className="p-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-semibold text-gray-800">{computer.name}</h3>
+                  <h3 className="text-xl font-semibold text-gray-800">{cleanText(computer.name)}</h3>
                   <span 
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
                       computer.status === 'available' ? 'bg-green-100 text-green-800' : 
@@ -257,9 +299,9 @@ const LabDetail: React.FC = () => {
                   </span>
                 </div>
                 
-                <p className="text-gray-600 mt-2">Hostname: {computer.hostname}</p>
+                <p className="text-gray-600 mt-2">Hostname: {cleanText(computer.hostname)}</p>
                 <p className="text-gray-600 mt-1">
-                  Especificaciones: {computer.specs ? JSON.parse(computer.specs).description || 'No especificado' : 'No especificado'}
+                  Especificaciones: {computer.specs ? cleanText(JSON.parse(computer.specs).description) || 'No especificado' : 'No especificado'}
                 </p>
                 
                 {computer.status === 'available' && (
@@ -282,7 +324,7 @@ const LabDetail: React.FC = () => {
     <div className="bg-white rounded-lg p-8 max-w-md w-full">
       <h2 className="text-2xl font-bold mb-4">Reservar Computadora</h2>
       <p className="text-gray-600 mb-4">
-        Estás reservando: <strong>{selectedComputer.name}</strong>
+        Estás reservando: <strong>{cleanText(selectedComputer.name)}</strong>
       </p>
 
       {reservationError && (

@@ -1,16 +1,14 @@
 import os
 from flask import Flask, request, send_from_directory, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager  # <-- AÑADIDO
 from db import db
 from auth import auth_bp, token_required
+from socket_manager import socketio
 from lab import lab_bp
 from computer import computer_bp
 from reservation import reservation_bp
 from user import User
-
-async_mode = 'eventlet'
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
@@ -36,8 +34,8 @@ db.init_app(app)
 # Inicializar JWT
 jwt = JWTManager(app)  # <-- AÑADIDO
 
-# Inicializar SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode)
+# Inicializar SocketIO con la app
+socketio.init_app(app)
 
 # Registrar blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')

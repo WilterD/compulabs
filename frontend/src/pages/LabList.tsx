@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useSocket } from '../SocketContext';
+import { cleanText } from '../utils/unicode';
 
 interface Lab {
   id: number;
@@ -38,11 +39,22 @@ const LabList: React.FC = () => {
     // Escuchar actualizaciones en tiempo real
     if (socket) {
       socket.on('lab_update', fetchLabs);
+      
+      // Escuchar eliminación de laboratorios
+      socket.on('lab_deleted', (data) => {
+        console.log('Laboratorio eliminado en tiempo real:', data);
+        
+        // Remover el laboratorio eliminado de la lista
+        setLabs(prevLabs => 
+          prevLabs.filter(lab => lab.id !== data.lab_id)
+        );
+      });
     }
 
     return () => {
       if (socket) {
         socket.off('lab_update');
+        socket.off('lab_deleted');
       }
     };
   }, [socket]);
@@ -88,14 +100,14 @@ const LabList: React.FC = () => {
               className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
             >
               <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-800">{lab.name}</h2>
-                <p className="text-gray-600 mt-2">{lab.description || 'Sin descripción'}</p>
+                <h2 className="text-xl font-semibold text-gray-800">{cleanText(lab.name)}</h2>
+                <p className="text-gray-600 mt-2">{cleanText(lab.description) || 'Sin descripción'}</p>
                 <div className="mt-4 flex items-center text-sm text-gray-500">
                   <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
-                  {lab.location}
+                  {cleanText(lab.location)}
                 </div>
                 <div className="mt-2 flex items-center text-sm text-gray-500">
                   <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
