@@ -9,7 +9,7 @@ WORKDIR /app
 
 # 2. Dependencias de sistema mínimas (para compilar paquetes C, si los hay)
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential gcc \
+ && apt-get install -y --no-install-recommends build-essential gcc curl \
  && rm -rf /var/lib/apt/lists/*
 
 # 3. Instala requirements
@@ -20,7 +20,13 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # 4. Copia TODO el código backend
 COPY . .
 
-# 5. Variables de entorno por defecto (se pueden sobreescribir en compose)
+# 5. Crear directorio de logs
+RUN mkdir -p /app/logs
+
+# 6. Hacer ejecutable el script de espera
+RUN chmod +x wait_for_db.py
+
+# 7. Variables de entorno por defecto (se pueden sobreescribir en compose)
 ENV DB_USERNAME=reservas_user \
     DB_PASSWORD=reservas_password \
     DB_HOST=db \
@@ -30,5 +36,8 @@ ENV DB_USERNAME=reservas_user \
 
 EXPOSE 5000
 
-# 6. Arranque (usando eventlet como servidor si usas SocketIO)
-CMD ["python", "main.py"]
+# 8. Script de inicio que espera la base de datos
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]

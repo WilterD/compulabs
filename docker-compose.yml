@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # Servicio de base de datos MySQL
@@ -7,41 +6,25 @@ services:
     container_name: reservas_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: reservas_db
       MYSQL_USER: reservas_user
       MYSQL_PASSWORD: reservas_password
+      # Configuraciones básicas de MySQL
+      MYSQL_ROOT_HOST: '%'
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # ← Ejecuta init.sql automáticamente
+      - mysql_data:/var/lib/mysql
     networks:
       - reservas_network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -prootpassword --silent 2>/dev/null | grep 'mysqld is alive'"]
-      timeout: 30s
-      retries: 15
-      interval: 15s
-      start_period: 60s
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: reservas_phpmyadmin
-    restart: always
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: rootpassword
-      MYSQL_ROOT_PASSWORD: rootpassword
-    ports:
-      - "8080:80"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - reservas_network
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Servicio de backend Flask con Socket.IO
   backend:
@@ -50,16 +33,38 @@ services:
       dockerfile: Dockerfile.backend
     container_name: reservas_backend
     restart: always
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      MYSQL_HOST: db
-      MYSQL_USER: reservas_user
-      MYSQL_PASSWORD: reservas_password
-      MYSQL_DATABASE: reservas_db
-      MYSQL_PORT: 3306
+      DB_USERNAME: reservas_user
+      DB_PASSWORD: reservas_password
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: reservas_db
+      # Configuraciones de reintentos de conexión
+      DB_RETRY_ATTEMPTS: 5
+      DB_RETRY_DELAY: 3
+      DB_CONNECTION_TIMEOUT: 30
+      # Configuraciones de seguridad Flask
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
+      SECRET_KEY: your-secret-key-change-in-production
+      # Configuraciones de logging
+      LOG_LEVEL: INFO
+      LOG_FILE: /app/logs/app.log
     ports:
       - "5000:5000"
     networks:
       - reservas_network
+    volumes:
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Servicio de frontend React
   frontend:
@@ -68,16 +73,65 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: reservas_frontend
     restart: always
-    ports:
-      - "80:80"
     depends_on:
       - backend
+    ports:
+      - "80:80"
     networks:
       - reservas_network
 
-volumes:
-  mysql_data:
+  # Servicio de phpMyAdmin para administración de base de datos
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2.1
+    container_name: reservas_phpmyadmin
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: reservas_user
+      PMA_PASSWORD: reservas_password
+      PMA_ARBITRARY: 0
+      UPLOAD_LIMIT: 64M
+      MAX_EXECUTION_TIME: 300
+      MEMORY_LIMIT: 256M
+      # Configuraciones de seguridad
+      PMA_ABSOLUTE_URI: http://localhost:8080/
+      PMA_QUERYHISTORYDB: 0
+      PMA_QUERYHISTORYMAX: 25
+      # Configuraciones de autenticación
+      PMA_USER_CONFIG_BASE64: ""
+      # Configuraciones de sesión
+      PMA_SESSION_SAVE_PATH: /tmp
+      # Configuraciones de logging
+      PMA_LOGGING: 1
+      PMA_LOG_ERROR: 1
+      # Configuraciones de timeout
+      PMA_TIMEOUT: 300
+      # Configuraciones de reintentos
+      PMA_RETRY_TIMEOUT: 10
+      PMA_MAX_RETRIES: 3
+    ports:
+      - "8080:80"
+    networks:
+      - reservas_network
+    volumes:
+      - phpmyadmin_data:/var/lib/phpmyadmin
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   reservas_network:
     driver: bridge
+
+volumes:
+  db_data:
+  mysql_data:
+  backend_logs:
+  phpmyadmin_data:

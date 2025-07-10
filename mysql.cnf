@@ -1,0 +1,43 @@
+[mysqld]
+# Configuraciones de seguridad
+bind-address = 0.0.0.0
+port = 3306
+
+# Configuraciones de autenticación
+default_authentication_plugin = mysql_native_password
+local_infile = 0
+
+# Configuraciones de rendimiento
+innodb_buffer_pool_size = 256M
+max_connections = 200
+connect_timeout = 60
+wait_timeout = 28800
+interactive_timeout = 28800
+
+# Configuraciones de logging
+log_error = /var/log/mysql/error.log
+general_log = 1
+general_log_file = /var/log/mysql/general.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
+
+# Configuraciones de reintentos
+max_connect_errors = 100
+max_reconnect_attempts = 3
+
+# Configuraciones de seguridad adicionales
+sql_mode = STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO
+explicit_defaults_for_timestamp = 1
+
+# Configuraciones de InnoDB
+innodb_file_per_table = 1
+innodb_flush_log_at_trx_commit = 2
+innodb_log_buffer_size = 16M
+innodb_log_file_size = 64M
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4 
