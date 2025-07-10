@@ -1,4 +1,5 @@
 import os
+import datetime
 from flask import Flask, request, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager  # <-- AÑADIDO
@@ -82,7 +83,24 @@ def crear_admin(current_user):
 # Ruta de health-check
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "message": "Sistema de reservas funcionando correctamente"})
+    try:
+        # Verificar conexión a la base de datos
+        with app.app_context():
+            db.engine.connect()
+        
+        return jsonify({
+            "status": "ok", 
+            "message": "Sistema de reservas funcionando correctamente",
+            "database": "connected",
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error en el sistema: {str(e)}",
+            "database": "disconnected",
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }), 500
 
 # Fallback a SPA index.html
 @app.route('/', defaults={'path': ''})

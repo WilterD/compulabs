@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import { useSocket } from '../SocketContext';
 import SuperUserPanel from './SuperUserPanel';
 import { cleanText } from '../utils/unicode';
+import './AdminPanel.css';
 
 // Función para decodificar caracteres Unicode
 const decodeUnicode = (str: string): string => {
@@ -57,15 +58,52 @@ interface Reservation {
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth();
-  if (user.role === 'superuser') return <SuperUserPanel />;
+  
+  // Verificar si el usuario está cargado
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Cargando usuario...</p>
+      </div>
+    );
+  }
+  
+  // Redirigir a superusuario si es necesario
+  if (user.role === 'superuser') {
+    return <SuperUserPanel />;
+  }
+  
+  // Verificar que el usuario sea admin
+  if (user.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Acceso denegado. Solo los administradores pueden acceder a este panel.</p>
+      </div>
+    );
+  }
+  
   const { socket } = useSocket();
-  const [activeTab, setActiveTab] = useState<string>('labs');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [labs, setLabs] = useState<Lab[]>([]);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [message, setMessage] = useState<string>('');
+
+  // Estadísticas del sistema
+  const [stats, setStats] = useState({
+    totalLabs: 0,
+    totalComputers: 0,
+    availableComputers: 0,
+    totalReservations: 0,
+    pendingReservations: 0,
+    confirmedReservations: 0,
+    totalUsers: 0,
+    totalStudents: 0,
+    totalAdmins: 0
+  });
 
   // Estados para formularios
   const [showLabForm, setShowLabForm] = useState<boolean>(false);
@@ -91,22 +129,73 @@ const AdminPanel: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(''); // Limpiar errores anteriores
         
-        if (activeTab === 'labs') {
+        console.log('🔄 Cargando datos para la pestaña:', activeTab);
+        
+        if (activeTab === 'dashboard') {
+          console.log('📊 Cargando dashboard y estadísticas...');
+          
+          // Cargar todos los datos para el dashboard
+          const [labsResponse, computersResponse, reservationsResponse, usersResponse] = await Promise.all([
+            axios.get(`${API_BASE_URL}/labs`),
+            axios.get(`${API_BASE_URL}/computers`),
+            axios.get(`${API_BASE_URL}/reservations/all`),
+            axios.get(`${API_BASE_URL}/auth/users`)
+          ]);
+          
+          const labs = labsResponse.data;
+          const computers = computersResponse.data;
+          const reservations = reservationsResponse.data;
+          const users = usersResponse.data;
+          
+          // Calcular estadísticas
+          const availableComputers = computers.filter((comp: Computer) => comp.status === 'available').length;
+          const pendingReservations = reservations.filter((res: Reservation) => res.status === 'pending').length;
+          const confirmedReservations = reservations.filter((res: Reservation) => res.status === 'confirmed').length;
+          const totalStudents = users.filter((u: User) => u.role === 'student').length;
+          const totalAdmins = users.filter((u: User) => u.role === 'admin').length;
+          
+          setStats({
+            totalLabs: labs.length,
+            totalComputers: computers.length,
+            availableComputers,
+            totalReservations: reservations.length,
+            pendingReservations,
+            confirmedReservations,
+            totalUsers: users.length,
+            totalStudents,
+            totalAdmins
+          });
+          
+          setLabs(labs);
+          setComputers(computers);
+          setReservations(reservations);
+          setUsers(users);
+          
+          console.log('✅ Dashboard cargado con estadísticas');
+          
+        } else if (activeTab === 'labs') {
+          console.log('📋 Cargando laboratorios...');
           const response = await axios.get(`${API_BASE_URL}/labs`);
+          console.log('✅ Laboratorios cargados:', response.data.length);
           setLabs(response.data);
         } else if (activeTab === 'computers') {
+          console.log('💻 Cargando computadoras...');
           const response = await axios.get(`${API_BASE_URL}/computers`);
+          console.log('✅ Computadoras cargadas:', response.data.length);
           setComputers(response.data);
         } else if (activeTab === 'reservations') {
+          console.log('📅 Cargando reservas...');
           const response = await axios.get(`${API_BASE_URL}/reservations/all`);
+          console.log('✅ Reservas cargadas:', response.data.length);
           
           // Obtener detalles completos para cada reserva
           const reservationsWithDetails = await Promise.all(
             response.data.map(async (reservation: Reservation) => {
               try {
                 // Obtener detalles del usuario
-                const userResponse = await axios.get(`${API_BASE_URL}/users/${reservation.user_id}`);
+                const userResponse = await axios.get(`${API_BASE_URL}/auth/users/${reservation.user_id}`);
                 
                 // Obtener detalles de la computadora
                 const computerResponse = await axios.get(`${API_BASE_URL}/computers/${reservation.computer_id}`);
@@ -129,12 +218,18 @@ const AdminPanel: React.FC = () => {
           );
           
           setReservations(reservationsWithDetails);
+        } else if (activeTab === 'users') {
+          console.log('👥 Cargando usuarios...');
+          const response = await axios.get(`${API_BASE_URL}/auth/users`);
+          console.log('✅ Usuarios cargados:', response.data.length);
+          setUsers(response.data);
         }
         
         setLoading(false);
-      } catch (err) {
-        console.error(`Error al cargar datos de ${activeTab}:`, err);
-        setError(`Error al cargar los datos de ${activeTab}. Por favor, intenta de nuevo más tarde.`);
+      } catch (err: any) {
+        console.error(`❌ Error al cargar datos de ${activeTab}:`, err);
+        const errorMessage = err.response?.data?.message || err.message || `Error al cargar los datos de ${activeTab}`;
+        setError(`${errorMessage}. Por favor, intenta de nuevo más tarde.`);
         setLoading(false);
       }
     };
@@ -399,22 +494,34 @@ const AdminPanel: React.FC = () => {
 
       <div className="nav-tabs">
         <button
+          className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          📊 Dashboard
+        </button>
+        <button
           className={`nav-link ${activeTab === 'labs' ? 'active' : ''}`}
           onClick={() => setActiveTab('labs')}
         >
-          Gestión de Laboratorios
+          🏢 Gestión de Laboratorios
         </button>
         <button
           className={`nav-link ${activeTab === 'computers' ? 'active' : ''}`}
           onClick={() => setActiveTab('computers')}
         >
-          Gestión de Computadoras
+          💻 Gestión de Computadoras
         </button>
         <button
           className={`nav-link ${activeTab === 'reservations' ? 'active' : ''}`}
           onClick={() => setActiveTab('reservations')}
         >
-          Gestión de Reservas
+          📅 Gestión de Reservas
+        </button>
+        <button
+          className={`nav-link ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          👥 Gestión de Usuarios
         </button>
       </div>
 
@@ -422,6 +529,105 @@ const AdminPanel: React.FC = () => {
         <div className="loading">Cargando...</div>
       ) : (
         <div className="tab-content">
+          {activeTab === 'dashboard' && (
+            <div className="dashboard-section">
+              <h2>📊 Dashboard del Sistema</h2>
+              
+              {/* Estadísticas principales */}
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon">🏢</div>
+                  <div className="stat-content">
+                    <h3>Laboratorios</h3>
+                    <p className="stat-number">{stats.totalLabs}</p>
+                    <p className="stat-label">Total en el sistema</p>
+                  </div>
+                </div>
+                
+                <div className="stat-card">
+                  <div className="stat-icon">💻</div>
+                  <div className="stat-content">
+                    <h3>Computadoras</h3>
+                    <p className="stat-number">{stats.totalComputers}</p>
+                    <p className="stat-label">Total: {stats.availableComputers} disponibles</p>
+                  </div>
+                </div>
+                
+                <div className="stat-card">
+                  <div className="stat-icon">📅</div>
+                  <div className="stat-content">
+                    <h3>Reservas</h3>
+                    <p className="stat-number">{stats.totalReservations}</p>
+                    <p className="stat-label">{stats.pendingReservations} pendientes, {stats.confirmedReservations} confirmadas</p>
+                  </div>
+                </div>
+                
+                <div className="stat-card">
+                  <div className="stat-icon">👥</div>
+                  <div className="stat-content">
+                    <h3>Usuarios</h3>
+                    <p className="stat-number">{stats.totalUsers}</p>
+                    <p className="stat-label">{stats.totalStudents} estudiantes, {stats.totalAdmins} administradores</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Resumen rápido */}
+              <div className="quick-summary">
+                <h3>📋 Resumen Rápido</h3>
+                <div className="summary-grid">
+                  <div className="summary-item">
+                    <span className="summary-label">Reservas Pendientes:</span>
+                    <span className="summary-value pending">{stats.pendingReservations}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Computadoras en Mantenimiento:</span>
+                    <span className="summary-value maintenance">
+                      {computers.filter(comp => comp.status === 'maintenance').length}
+                    </span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Ocupación del Sistema:</span>
+                    <span className="summary-value">
+                      {stats.totalComputers > 0 ? Math.round(((stats.totalComputers - stats.availableComputers) / stats.totalComputers) * 100) : 0}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Acciones rápidas */}
+              <div className="quick-actions">
+                <h3>⚡ Acciones Rápidas</h3>
+                <div className="actions-grid">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setActiveTab('reservations')}
+                  >
+                    📅 Ver Reservas Pendientes
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setActiveTab('computers')}
+                  >
+                    🔧 Gestionar Computadoras
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setActiveTab('labs')}
+                  >
+                    🏢 Gestionar Laboratorios
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => setActiveTab('users')}
+                  >
+                    👥 Ver Usuarios
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'labs' && (
             <div className="labs-section">
               <h2>Laboratorios</h2>
@@ -525,6 +731,33 @@ const AdminPanel: React.FC = () => {
                         </button>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="users-section">
+              <h2>👥 Gestión de Usuarios</h2>
+              <div className="users-list">
+                {users.map((user) => (
+                  <div key={user.id} className="user-card">
+                    <div className="user-header">
+                      <h3>{decodeUnicode(user.name)}</h3>
+                      <span className={`role-badge role-${user.role}`}>
+                        {user.role === 'student' ? '👨‍🎓 Estudiante' :
+                         user.role === 'admin' ? '👨‍💼 Administrador' :
+                         user.role === 'superuser' ? '👑 Superusuario' : user.role}
+                      </span>
+                    </div>
+                    
+                    <div className="user-details">
+                      <p><strong>Email:</strong> {user.email}</p>
+                      <p><strong>ID:</strong> {user.id}</p>
+                      <p><strong>Rol:</strong> {user.role}</p>
+                      <p><strong>Creado:</strong> {formatDateTime(user.created_at || new Date().toISOString())}</p>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -156,3 +156,13 @@ def get_user_by_id(current_user, user_id):
         return jsonify({'message': 'Usuario no encontrado'}), 404
 
     return jsonify(user.to_dict()), 200
+
+# Obtener todos los usuarios (solo admin y superuser)
+@auth_bp.route('/users', methods=['GET'])
+@token_required
+def get_all_users(current_user):
+    if current_user.role not in ['admin', 'superuser']:
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin o superuser'}), 403
+
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
