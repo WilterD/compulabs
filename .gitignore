@@ -1,3 +1,21 @@
+# Ignorar archivos de entorno
+.env
+
+# Ignorar archivos de configuración
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignorar archivos de configuración
+.env.local
+
+#ignorar archivos de frontend
+node_modules
+
+#ignorar archivos de python
+__pycache__
+
 # Logs
 logs
 *.log
@@ -25,3 +43,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

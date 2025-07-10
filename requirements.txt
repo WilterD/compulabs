@@ -5,6 +5,7 @@ Flask-SocketIO
 flask_jwt_extended
 eventlet
 PyMySQL
+mysql-connector-python
 python-dotenv
 PyJWT
 cryptography
