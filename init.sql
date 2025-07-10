@@ -63,6 +63,15 @@ CREATE TABLE reservations (
     FOREIGN KEY (computer_id) REFERENCES computers(id) ON DELETE CASCADE
 )CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) DEFAULT 'unread',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- Insertar usuarios de prueba
 -- Contraseñas en texto plano: admin123, student123, staff123
 INSERT INTO users (email, password, name, role) VALUES

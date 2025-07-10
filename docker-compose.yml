@@ -52,6 +52,8 @@ services:
       # Configuraciones de logging
       LOG_LEVEL: INFO
       LOG_FILE: /app/logs/app.log
+      # Configuración del servicio de notificaciones
+      NOTIFICATION_SERVICE_URL: http://notifications:8001
     ports:
       - "5000:5000"
     networks:
@@ -99,12 +101,19 @@ services:
       MYSQL_PASSWORD: reservas_password
       MYSQL_HOST: db
       MYSQL_DATABASE: reservas_db
+      NOTIFICATION_SERVICE_URL: http://notifications:8001
     ports:
       - "8001:8001"
     depends_on:
       - db
     networks:
       - reservas_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/notifications/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Servicio de phpMyAdmin para administración de base de datos
   phpmyadmin:

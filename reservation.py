@@ -6,6 +6,11 @@ from socket_manager import socketio
 from computer import Computer
 from sqlalchemy import and_
 import requests
+from notification_integration import (
+    safe_notify_reservation_created,
+    safe_notify_reservation_confirmed,
+    safe_notify_reservation_cancelled
+)
 
 reservation_bp = Blueprint('reservations', __name__)
 
@@ -115,6 +120,28 @@ def cancel_reservation(current_user, reservation_id):
     try:
         reservation.status = 'cancelled'
         db.session.commit()
+        
+        # Enviar notificación de reserva cancelada por usuario
+        try:
+            computer = Computer.query.get(reservation.computer_id)
+            reservation_data = {
+                'computer_name': computer.name if computer else 'Computadora',
+                'laboratory_name': computer.laboratory.name if computer and computer.laboratory else 'Laboratorio',
+                'date': reservation.start_time.strftime('%Y-%m-%d'),
+                'start_time': reservation.start_time.strftime('%H:%M'),
+                'end_time': reservation.end_time.strftime('%H:%M')
+            }
+            
+            reason = "Cancelada por el usuario"
+            safe_notify_reservation_cancelled(
+                user_id=reservation.user_id,
+                reservation_data=reservation_data,
+                token=request.headers.get('Authorization', '').replace('Bearer ', ''),
+                reason=reason
+            )
+        except Exception as e:
+            print(f"Error enviando notificación de cancelación: {e}")
+        
         return jsonify({'message': f'Reserva {reservation_id} cancelada correctamente', 'reservation': reservation.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
@@ -161,6 +188,30 @@ def create_reservation(current_user):
         
         db.session.add(new_reservation)
         db.session.commit()
+        
+        # Enviar notificación de reserva creada
+        try:
+            # Obtener información de la computadora y laboratorio
+            computer = Computer.query.get(computer_id)
+            if computer:
+                reservation_data = {
+                    'computer_name': computer.name,
+                    'laboratory_name': computer.laboratory.name if computer.laboratory else 'Laboratorio',
+                    'date': start_time.strftime('%Y-%m-%d'),
+                    'start_time': start_time.strftime('%H:%M'),
+                    'end_time': end_time.strftime('%H:%M'),
+                    'status': 'Pendiente'
+                }
+                
+                # Enviar notificación
+                safe_notify_reservation_created(
+                    user_id=current_user.id,
+                    reservation_data=reservation_data,
+                    token=request.headers.get('Authorization', '').replace('Bearer ', '')
+                )
+        except Exception as e:
+            print(f"Error enviando notificación: {e}")
+            # No fallar la creación de reserva si falla la notificación
         
         return jsonify({'message': 'Reserva creada', 'reservation': new_reservation.to_dict()}), 201
 
@@ -300,6 +351,24 @@ def confirm_reservation(current_user, reservation_id):
             'laboratory_id': computer.laboratory_id
         })
 
+    # Enviar notificación de reserva confirmada
+    try:
+        reservation_data = {
+            'computer_name': computer.name if computer else 'Computadora',
+            'laboratory_name': computer.laboratory.name if computer and computer.laboratory else 'Laboratorio',
+            'date': reservation.start_time.strftime('%Y-%m-%d'),
+            'start_time': reservation.start_time.strftime('%H:%M'),
+            'end_time': reservation.end_time.strftime('%H:%M')
+        }
+        
+        safe_notify_reservation_confirmed(
+            user_id=reservation.user_id,
+            reservation_data=reservation_data,
+            token=request.headers.get('Authorization', '').replace('Bearer ', '')
+        )
+    except Exception as e:
+        print(f"Error enviando notificación de confirmación: {e}")
+
     return jsonify({'message': 'Reserva confirmada exitosamente', 'reservation': reservation.to_dict()})
 
 @reservation_bp.route('/<int:reservation_id>/cancel', methods=['PUT'])
@@ -351,6 +420,26 @@ def cancel_reservation_admin(current_user, reservation_id):
             'new_status': computer.status,
             'laboratory_id': computer.laboratory_id
         })
+
+    # Enviar notificación de reserva cancelada
+    try:
+        reservation_data = {
+            'computer_name': computer.name if computer else 'Computadora',
+            'laboratory_name': computer.laboratory.name if computer and computer.laboratory else 'Laboratorio',
+            'date': reservation.start_time.strftime('%Y-%m-%d'),
+            'start_time': reservation.start_time.strftime('%H:%M'),
+            'end_time': reservation.end_time.strftime('%H:%M')
+        }
+        
+        reason = "Cancelada por administrador"
+        safe_notify_reservation_cancelled(
+            user_id=reservation.user_id,
+            reservation_data=reservation_data,
+            token=request.headers.get('Authorization', '').replace('Bearer ', ''),
+            reason=reason
+        )
+    except Exception as e:
+        print(f"Error enviando notificación de cancelación: {e}")
 
     return jsonify({'message': 'Reserva cancelada exitosamente', 'reservation': reservation.to_dict()})
 
