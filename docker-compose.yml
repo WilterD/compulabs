@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   # Servicio de base de datos MySQL
@@ -6,21 +7,41 @@ services:
     container_name: reservas_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: reservas_db
       MYSQL_USER: reservas_user
       MYSQL_PASSWORD: reservas_password
     ports:
       - "3306:3306"
     volumes:
+      - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # ← Ejecuta init.sql automáticamente
     networks:
       - reservas_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -prootpassword --silent 2>/dev/null | grep 'mysqld is alive'"]
+      timeout: 30s
+      retries: 15
+      interval: 15s
+      start_period: 60s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: reservas_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - reservas_network
 
   # Servicio de backend Flask con Socket.IO
   backend:
@@ -29,15 +50,12 @@ services:
       dockerfile: Dockerfile.backend
     container_name: reservas_backend
     restart: always
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DB_USERNAME: reservas_user
-      DB_PASSWORD: reservas_password
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: reservas_db
+      MYSQL_HOST: db
+      MYSQL_USER: reservas_user
+      MYSQL_PASSWORD: reservas_password
+      MYSQL_DATABASE: reservas_db
+      MYSQL_PORT: 3306
     ports:
       - "5000:5000"
     networks:
@@ -50,16 +68,16 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: reservas_frontend
     restart: always
-    depends_on:
-      - backend
     ports:
       - "80:80"
+    depends_on:
+      - backend
     networks:
       - reservas_network
+
+volumes:
+  mysql_data:
 
 networks:
   reservas_network:
     driver: bridge
-
-volumes:
-  db_data:
