@@ -146,7 +146,7 @@ const AdminPanel: React.FC = () => {
       socket.on('lab_update', () => {
         if (activeTab === 'labs') fetchData();
       });
-      socket.on('computer_status_update', () => {
+      socket.on('computer_status_updated', () => {
         if (activeTab === 'computers') fetchData();
       });
       socket.on('reservation_update', () => {
@@ -295,9 +295,18 @@ const AdminPanel: React.FC = () => {
 
   const handleUpdateComputerStatus = async (computerId: number, newStatus: string) => {
     try {
-      await axios.put(`${API_BASE_URL}/computers/${computerId}/status`, {
+      console.log('🔧 ADMIN: Cambiando estado de computadora');
+      console.log('   - Computer ID:', computerId);
+      console.log('   - Nuevo estado:', newStatus);
+      console.log('   - URL de la petición:', `${API_BASE_URL}/computers/${computerId}/status`);
+      
+      const response = await axios.put(`${API_BASE_URL}/computers/${computerId}/status`, {
         status: newStatus
       });
+      
+      console.log('✅ ADMIN: Estado de computadora actualizado exitosamente');
+      console.log('   - Respuesta del servidor:', response.data);
+      
       setComputers(prevComputers =>
         prevComputers.map(computer =>
           computer.id === computerId
@@ -306,8 +315,9 @@ const AdminPanel: React.FC = () => {
         )
       );
       setMessage(`Estado de computadora actualizado a ${newStatus}`);
-    } catch (err) {
-      console.error('Error al actualizar estado de computadora:', err);
+    } catch (err: any) {
+      console.error('❌ ADMIN: Error al actualizar estado de computadora:', err);
+      console.error('   - Detalles del error:', err.response?.data || err.message);
       setError('Error al actualizar el estado de la computadora');
     }
   };

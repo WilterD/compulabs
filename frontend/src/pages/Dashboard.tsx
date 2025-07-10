@@ -75,28 +75,41 @@ const Dashboard: React.FC = () => {
 
     fetchDashboardData();
 
-    if (socket) {
+    if (socket && user) {
+      console.log('🎯 DASHBOARD: Configurando listeners de Socket.IO');
+      console.log('   - Socket conectado:', socket.connected);
+      console.log('   - Socket ID:', socket.id);
+      console.log('   - Usuario ID:', user.id);
+      
       // Escuchar actualizaciones de estado de computadoras
       socket.on('computer_status_updated', (data) => {
-        console.log('Estado de computadora actualizado en tiempo real:', data);
+        console.log('🎯 DASHBOARD: Evento computer_status_updated recibido');
+        console.log('   - Datos recibidos:', data);
+        console.log('   - Computer ID:', data.computer_id);
+        console.log('   - Estado anterior:', data.old_status);
+        console.log('   - Estado nuevo:', data.new_status);
         
         // Actualizar el contador de computadoras disponibles
+        console.log('🔄 Actualizando contador de computadoras disponibles...');
         axios.get(`${API_BASE_URL}/computers/available`)
           .then(response => {
+            console.log('✅ Computadoras disponibles actualizadas:', response.data.length);
             setStats(prev => ({
               ...prev,
               availableComputers: response.data.length
             }));
           })
-          .catch(err => console.error('Error al actualizar computadoras disponibles:', err));
+          .catch(err => console.error('❌ Error al actualizar computadoras disponibles:', err));
       });
 
       // Escuchar actualizaciones de estado de reservas (cuando admin aprueba/cancela)
       socket.on('reservation_status_updated', (data) => {
-        console.log('Estado de reserva actualizado en tiempo real:', data);
+        console.log('🎯 DASHBOARD: Evento reservation_status_updated recibido');
+        console.log('   - Datos recibidos:', data);
         
         // Solo actualizar si la reserva pertenece al usuario actual
         if (data.user_id === user.id) {
+          console.log('   - Reserva pertenece al usuario actual, actualizando contadores...');
           // Actualizar contadores de reservas
           axios.get(`${API_BASE_URL}/reservations`)
             .then(response => {
@@ -127,6 +140,7 @@ const Dashboard: React.FC = () => {
 
       // Escuchar actualizaciones de reservas
       socket.on('reservation_update', () => {
+        console.log('🎯 DASHBOARD: Evento reservation_update recibido');
         axios.get(`${API_BASE_URL}/reservations`)
           .then(response => {
             const now = new Date();
@@ -146,6 +160,7 @@ const Dashboard: React.FC = () => {
 
     return () => {
       if (socket) {
+        console.log('Dashboard: Limpiando listeners de Socket.IO');
         socket.off('computer_status_updated');
         socket.off('reservation_status_updated');
         socket.off('reservation_update');
@@ -302,6 +317,22 @@ const Dashboard: React.FC = () => {
             ? 'Estás recibiendo actualizaciones en tiempo real sobre la disponibilidad de computadoras.'
             : 'No estás recibiendo actualizaciones en tiempo real. Intenta recargar la página.'}
         </p>
+        
+        {/* Botón de prueba para verificar eventos */}
+        <button
+          onClick={async () => {
+            try {
+              console.log('🧪 DASHBOARD: Probando evento de Socket.IO...');
+              await axios.post(`${API_BASE_URL}/computers/test-emit`);
+              console.log('🧪 DASHBOARD: Evento de prueba enviado al backend');
+            } catch (err) {
+              console.error('❌ DASHBOARD: Error al enviar evento de prueba:', err);
+            }
+          }}
+          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Probar Evento Socket.IO
+        </button>
       </div>
 
       <div className="mt-8">

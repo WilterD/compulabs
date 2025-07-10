@@ -9,6 +9,7 @@ from lab import lab_bp
 from computer import computer_bp
 from reservation import reservation_bp
 from user import User
+import time
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
@@ -106,6 +107,25 @@ def handle_disconnect():
     print('Cliente desconectado')
 
 if __name__ == '__main__':
+    # Esperar a que la base de datos esté lista
+    max_retries = 30
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            with app.app_context():
+                db.engine.connect()
+                print("Base de datos conectada exitosamente")
+                break
+        except Exception as e:
+            retry_count += 1
+            print(f"Intento {retry_count}/{max_retries}: Esperando a que la base de datos esté lista...")
+            time.sleep(2)
+    
+    if retry_count >= max_retries:
+        print("Error: No se pudo conectar a la base de datos después de varios intentos")
+        exit(1)
+    
     with app.app_context():
         db.create_all()
     socketio.run(app, host='0.0.0.0', port=5000)

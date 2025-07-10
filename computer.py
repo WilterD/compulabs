@@ -61,6 +61,19 @@ def get_computer_by_id(computer_id):
         return jsonify({'error': 'Computer not found'}), 404
     return jsonify(computer.to_dict())
 
+# Test endpoint para emitir evento manualmente
+@computer_bp.route('/test-emit', methods=['POST'])
+def test_emit():
+    print("🧪 TEST: Emitiendo evento de prueba")
+    socketio.emit('computer_status_updated', {
+        'computer_id': 1,
+        'old_status': 'available',
+        'new_status': 'maintenance',
+        'laboratory_id': 1
+    })
+    print("✅ TEST: Evento de prueba emitido")
+    return jsonify({'message': 'Evento de prueba emitido'})
+
 # Actualizar estado de computadora (solo admin)
 @computer_bp.route('/<int:computer_id>/status', methods=['PUT'])
 @token_required
@@ -83,12 +96,20 @@ def update_computer_status(current_user, computer_id):
     db.session.commit()
 
     # Emitir evento de actualización en tiempo real
+    print(f"🔔 EMITIENDO EVENTO: computer_status_updated")
+    print(f"   - Computer ID: {computer_id}")
+    print(f"   - Estado anterior: {old_status}")
+    print(f"   - Estado nuevo: {new_status}")
+    print(f"   - Laboratory ID: {computer.laboratory_id}")
+    
     socketio.emit('computer_status_updated', {
         'computer_id': computer_id,
         'old_status': old_status,
         'new_status': new_status,
         'laboratory_id': computer.laboratory_id
     })
+    
+    print(f"✅ Evento computer_status_updated emitido exitosamente")
 
     return jsonify({'message': f'Estado de computadora {computer_id} actualizado a {new_status}', 'computer': computer.to_dict()})
 

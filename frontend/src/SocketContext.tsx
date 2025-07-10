@@ -22,32 +22,56 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Inicializar la conexión de Socket.io
+    console.log('🔌 SOCKET: Iniciando conexión WebSocket');
+    console.log('   - URL del servidor:', API_BASE_URL);
+    
     const socketInstance = io(API_BASE_URL, {
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: true
     });
 
     socketInstance.on('connect', () => {
-      console.log('Conectado al servidor de WebSocket');
+      console.log('🔌 SOCKET: Conectado al servidor de WebSocket');
+      console.log('   - Socket ID:', socketInstance.id);
+      console.log('   - URL del servidor:', API_BASE_URL);
       setConnected(true);
     });
 
-    socketInstance.on('disconnect', () => {
-      console.log('Desconectado del servidor de WebSocket');
+    socketInstance.on('disconnect', (reason) => {
+      console.log('🔌 SOCKET: Desconectado del servidor de WebSocket');
+      console.log('   - Razón:', reason);
       setConnected(false);
     });
 
     socketInstance.on('error', (error) => {
-      console.error('Error de conexión WebSocket:', error);
+      console.error('❌ SOCKET: Error de conexión WebSocket:', error);
       setConnected(false);
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.error('❌ SOCKET: Error de conexión:', error);
+      setConnected(false);
+    });
+
+    socketInstance.on('reconnect', (attemptNumber) => {
+      console.log('🔌 SOCKET: Reconectado después de', attemptNumber, 'intentos');
+      setConnected(true);
+    });
+
+    socketInstance.on('reconnect_error', (error) => {
+      console.error('❌ SOCKET: Error de reconexión:', error);
     });
 
     setSocket(socketInstance);
 
     // Limpiar al desmontar
     return () => {
+      console.log('🔌 SOCKET: Desconectando WebSocket');
       socketInstance.disconnect();
     };
   }, []);

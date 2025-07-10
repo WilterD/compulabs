@@ -6,6 +6,7 @@ Sistema completo de microservicios para la gestión de reservas de computadoras 
 
 - **Frontend**: React + TypeScript + Vite
 - **Backend**: Flask + Socket.IO (Python)
+- **Microservicio de Notificaciones**: Flask (Python) - Emails y SMS
 - **Base de Datos**: MySQL 8.0
 - **Gestión de BD**: phpMyAdmin
 - **Contenedores**: Docker + Docker Compose
@@ -39,6 +40,7 @@ docker-compose down
 3. **Acceder a los servicios**
 - **Frontend**: http://localhost
 - **Backend API**: http://localhost:5000
+- **Microservicio de Notificaciones**: http://localhost:5001
 - **phpMyAdmin**: http://localhost:8080
 - **Base de Datos**: localhost:3306
 
@@ -102,6 +104,9 @@ docker-compose up -d backend
 
 # Solo el frontend
 docker-compose up -d frontend
+
+# Solo el microservicio de notificaciones
+docker-compose up -d notifications
 ```
 
 ### Verificar estado de los servicios
@@ -113,6 +118,7 @@ docker-compose ps
 # Ver logs de un servicio específico
 docker-compose logs backend
 docker-compose logs frontend
+docker-compose logs notifications
 docker-compose logs db
 docker-compose logs phpmyadmin
 ```
@@ -122,6 +128,7 @@ docker-compose logs phpmyadmin
 ```bash
 # Reiniciar un servicio específico
 docker-compose restart backend
+docker-compose restart notifications
 
 # Reiniciar todos los servicios
 docker-compose restart
@@ -186,8 +193,11 @@ El sistema incluye comunicación en tiempo real mediante Socket.IO:
 proyecto_microservicios/
 ├── frontend/                 # Aplicación React
 ├── backend/                  # API Flask
+├── notification_service.py   # Microservicio de notificaciones
+├── notification_integration.py # Integración con el backend
 ├── docker-compose.yml        # Configuración de contenedores
 ├── init.sql                  # Script de inicialización de BD
+├── NOTIFICATIONS_README.md   # Documentación del microservicio
 └── README.md                 # Este archivo
 ```
 
@@ -198,6 +208,50 @@ Las variables de entorno están configuradas en el `docker-compose.yml`:
 - **phpMyAdmin**: Acceso root con contraseña `rootpassword`
 - **Backend**: Puerto 5000
 - **Frontend**: Puerto 80
+- **Microservicio de Notificaciones**: Puerto 5001
+
+## 📧 Microservicio de Notificaciones
+
+El sistema incluye un microservicio dedicado para manejar notificaciones por email y SMS:
+
+### Características
+- **Notificaciones por Email**: Usando SMTP (Gmail, Outlook, etc.)
+- **Notificaciones por SMS**: Usando Twilio
+- **Tipos de notificaciones**:
+  - Reserva creada
+  - Reserva confirmada
+  - Reserva cancelada
+  - Recordatorios
+
+### Configuración
+Para configurar las notificaciones, establece las siguientes variables de entorno:
+
+```bash
+# Email (Gmail)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu_email@gmail.com
+SMTP_PASSWORD=tu_app_password
+
+# SMS (Twilio)
+TWILIO_ACCOUNT_SID=tu_account_sid
+TWILIO_AUTH_TOKEN=tu_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+### Documentación
+Para más información sobre el microservicio de notificaciones, consulta:
+- [NOTIFICATIONS_README.md](NOTIFICATIONS_README.md) - Documentación completa
+- [test_notifications.py](test_notifications.py) - Script de pruebas
+
+### Pruebas
+```bash
+# Probar el microservicio de notificaciones
+python test_notifications.py
+
+# Health check manual
+curl http://localhost:5001/api/notifications/health
+```
 - **phpMyAdmin**: Puerto 8080
 
 ## 🐛 Solución de Problemas

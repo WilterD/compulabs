@@ -4,6 +4,7 @@ from db import db
 from auth import token_required
 from socket_manager import socketio
 from computer import Computer
+from sqlalchemy import and_
 import requests
 
 reservation_bp = Blueprint('reservations', __name__)
@@ -139,10 +140,12 @@ def create_reservation(current_user):
 
         # ⛔ Verificar solapamientos (reservas pendientes o confirmadas)
         overlapping = Reservation.query.filter(
-            Reservation.computer_id == computer_id,
-            Reservation.status.in_(['pending', 'confirmed']),
-            Reservation.start_time < end_time,
-            Reservation.end_time > start_time
+            and_(
+                Reservation.computer_id == computer_id,
+                Reservation.status.in_(['pending', 'confirmed']),  # type: ignore
+                Reservation.start_time < end_time,  # type: ignore
+                Reservation.end_time > start_time  # type: ignore
+            )
         ).first()
 
         if overlapping:
@@ -205,10 +208,10 @@ def get_availability(current_user):
 
     # Obtenemos reservas confirmadas o pendientes en ese día y pc
     reservations = Reservation.query.filter(
-        Reservation.computer_id == computer_id,
-        Reservation.status.in_(['pending', 'confirmed']),
-        Reservation.start_time >= datetime.combine(target_date, time(0, 0)),
-        Reservation.end_time <= datetime.combine(target_date, time(23, 59, 59))
+        Reservation.computer_id == computer_id,  # type: ignore
+        Reservation.status.in_(['pending', 'confirmed']),  # type: ignore
+        Reservation.start_time >= datetime.combine(target_date, time(0, 0)),  # type: ignore
+        Reservation.end_time <= datetime.combine(target_date, time(23, 59, 59))  # type: ignore
     ).all()
 
     # Marcar como no disponibles los slots que intersectan con reservas existentes
@@ -249,10 +252,10 @@ def get_occupied_hours(current_user):
     end_of_day = datetime.combine(date, datetime.max.time())
 
     reservations = Reservation.query.filter(
-        Reservation.computer_id == computer_id,
-        Reservation.status.in_(['pending', 'confirmed']),
-        Reservation.start_time >= start_of_day,
-        Reservation.start_time <= end_of_day
+        Reservation.computer_id == computer_id,  # type: ignore
+        Reservation.status.in_(['pending', 'confirmed']),  # type: ignore
+        Reservation.start_time >= start_of_day,  # type: ignore
+        Reservation.start_time <= end_of_day  # type: ignore
     ).all()
 
     occupied_hours = sorted({res.start_time.hour for res in reservations})
@@ -322,9 +325,9 @@ def cancel_reservation_admin(current_user, reservation_id):
     if computer and old_computer_status == 'reserved':
         # Verificar si hay otras reservas confirmadas para esta computadora
         other_confirmed_reservations = Reservation.query.filter(
-            Reservation.computer_id == computer.id,
-            Reservation.status == 'confirmed',
-            Reservation.id != reservation_id
+            Reservation.computer_id == computer.id,  # type: ignore
+            Reservation.status == 'confirmed',  # type: ignore
+            Reservation.id != reservation_id  # type: ignore
         ).count()
         
         if other_confirmed_reservations == 0:
