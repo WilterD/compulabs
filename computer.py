@@ -54,6 +54,56 @@ def get_computers_by_laboratory(laboratory_id):
     computers = Computer.query.filter_by(laboratory_id=laboratory_id).all()
     return jsonify([computer.to_dict() for computer in computers])
 
+# Crear una nueva computadora (solo admin)
+@computer_bp.route('/', methods=['POST'])
+@token_required
+def create_computer(current_user):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
+
+    data = request.get_json()
+
+    if not data or not data.get('name') or not data.get('hostname') or not data.get('laboratory_id'):
+        return jsonify({'message': 'Datos incompletos. Se requiere: name, hostname, laboratory_id'}), 400
+
+    # Verificar que el hostname no esté duplicado
+    existing_computer = Computer.query.filter_by(hostname=data['hostname']).first()
+    if existing_computer:
+        return jsonify({'message': 'Ya existe una computadora con ese hostname'}), 409
+
+    # Verificar que el laboratorio existe
+    from laboratory import Laboratory
+    laboratory = Laboratory.query.get(data['laboratory_id'])
+    if not laboratory:
+        return jsonify({'message': 'Laboratorio no encontrado'}), 404
+
+    try:
+        new_computer = Computer(
+            name=data['name'],
+            hostname=data['hostname'],
+            specs=data.get('specs', ''),
+            status=data.get('status', 'available'),
+            laboratory_id=data['laboratory_id']
+        )
+
+        db.session.add(new_computer)
+        db.session.commit()
+
+        # Emitir evento de creación en tiempo real
+        socketio.emit('computer_created', {
+            'computer': new_computer.to_dict(),
+            'laboratory_id': new_computer.laboratory_id
+        })
+
+        return jsonify({
+            'message': 'Computadora creada exitosamente', 
+            'computer': new_computer.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al crear la computadora: {str(e)}'}), 500
+
 @computer_bp.route('/<int:computer_id>', methods=['GET'])
 def get_computer_by_id(computer_id):
     computer = Computer.query.get(computer_id)
@@ -75,7 +125,7 @@ def test_emit():
     return jsonify({'message': 'Evento de prueba emitido'})
 
 # Actualizar estado de computadora (solo admin)
-@computer_bp.route('/<int:computer_id>/status', methods=['PUT'])
+@computer_bp.route('/<int:computer_id>/status', methods=['PATCH'])
 @token_required
 def update_computer_status(current_user, computer_id):
     if current_user.role != 'admin':
@@ -112,6 +162,70 @@ def update_computer_status(current_user, computer_id):
     print(f"✅ Evento computer_status_updated emitido exitosamente")
 
     return jsonify({'message': f'Estado de computadora {computer_id} actualizado a {new_status}', 'computer': computer.to_dict()})
+
+# Actualizar computadora completa (solo admin)
+@computer_bp.route('/<int:computer_id>', methods=['PUT'])
+@token_required
+def update_computer(current_user, computer_id):
+    if current_user.role != 'admin':
+        return jsonify({'message': 'Acceso denegado: se requiere rol admin'}), 403
+
+    computer = Computer.query.get(computer_id)
+    if not computer:
+        return jsonify({'message': 'Computadora no encontrada'}), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'message': 'No se proporcionaron datos para actualizar'}), 400
+
+    try:
+        # Actualizar campos si están presentes en la solicitud
+        if 'name' in data:
+            computer.name = data['name']
+        
+        if 'hostname' in data:
+            # Verificar que el nuevo hostname no esté duplicado
+            existing_computer = Computer.query.filter(
+                Computer.hostname == data['hostname'],
+                Computer.id != computer_id
+            ).first()
+            if existing_computer:
+                return jsonify({'message': 'Ya existe una computadora con ese hostname'}), 409
+            computer.hostname = data['hostname']
+        
+        if 'specs' in data:
+            computer.specs = data['specs']
+        
+        if 'status' in data:
+            if data['status'] not in ['available', 'maintenance', 'reserved']:
+                return jsonify({'message': 'Estado inválido'}), 400
+            old_status = computer.status
+            computer.status = data['status']
+        
+        if 'laboratory_id' in data:
+            # Verificar que el laboratorio existe
+            from laboratory import Laboratory
+            laboratory = Laboratory.query.get(data['laboratory_id'])
+            if not laboratory:
+                return jsonify({'message': 'Laboratorio no encontrado'}), 404
+            computer.laboratory_id = data['laboratory_id']
+
+        db.session.commit()
+
+        # Emitir evento de actualización en tiempo real
+        socketio.emit('computer_updated', {
+            'computer': computer.to_dict(),
+            'laboratory_id': computer.laboratory_id
+        })
+
+        return jsonify({
+            'message': 'Computadora actualizada exitosamente', 
+            'computer': computer.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al actualizar la computadora: {str(e)}'}), 500
 
 @computer_bp.route('/<int:computer_id>', methods=['DELETE'])
 @token_required
