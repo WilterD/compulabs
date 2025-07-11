@@ -1,5 +1,5 @@
 #################################
-# Etapa única – backend Flask
+# Etapa única – backend Flask
 #################################
 FROM python:3.11-slim
 
@@ -23,8 +23,8 @@ COPY . .
 # 5. Crear directorio de logs
 RUN mkdir -p /app/logs
 
-# 6. Hacer ejecutable el script de espera
-RUN chmod +x wait_for_db.py
+# 6. Hacer ejecutable el script de espera y el script de inicio
+RUN chmod +x wait_for_db.py && chmod +x start.sh
 
 # 7. Variables de entorno por defecto (se pueden sobreescribir en compose)
 ENV DB_USERNAME=reservas_user \
@@ -35,9 +35,5 @@ ENV DB_USERNAME=reservas_user \
     FLASK_ENV=production
 
 EXPOSE 5000
-
-# 8. Script de inicio que espera la base de datos
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
 
 CMD ["/app/start.sh"]
